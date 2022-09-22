@@ -26,16 +26,6 @@ class MyGUI(QMainWindow):
         self.thread.change_pixmap_signal.connect(self.update_image)
         self.thread.start()
 
-        '''
-        self.image = cv2.imread('test.jpg')
-        #self.image = "test.jpg"
-        self.convert = QImage(self.image, self.image.shape[1], self.image.shape[0], self.image.strides[0], QImage.Format.Format_BGR888)
-        
-        self.label.resize(self.image.shape[1], self.image.shape[0])
-        self.label.setPixmap(QPixmap.fromImage(self.convert))
-        self.label.setMinimumSize(1, 1)
-        '''
-
     @pyqtSlot(np.ndarray)
     def update_image(self, cv_img):
             qt_img = self.convert_cv_qt(cv_img)
