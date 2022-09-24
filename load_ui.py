@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import *
+from PyQt6.QtWidgets import QMainWindow, QApplication
 from PyQt6 import uic, QtGui
 from PyQt6.QtGui import QImage, QPixmap
 from PyQt6.QtCore import QThread, pyqtSignal, pyqtSlot, Qt
