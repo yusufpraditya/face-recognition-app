@@ -28,11 +28,17 @@ class MyGUI(QMainWindow):
 
     @pyqtSlot(np.ndarray)
     def update_image(self, cv_img):
-            qt_img = self.convert_cv_qt(cv_img)
+            qt_img = self.convert_cv_qt(cv_img)   
+
             self.label.resize(cv_img.shape[1], cv_img.shape[0])
             self.label.setPixmap(qt_img)
 
-    def convert_cv_qt(self, cv_img):            
+    def convert_cv_qt(self, cv_img):    
+            scale_percent = 30
+            height = int(cv_img.shape[0] * (scale_percent / 100))
+            width = int(cv_img.shape[1] * (scale_percent / 100))
+            dim = (width, height)
+            cv_img = cv2.resize(cv_img, dim, interpolation=cv2.INTER_AREA)
             h, w, ch = cv_img.shape
             stride = cv_img.strides[0]
             convert_to_Qt_format = QtGui.QImage(cv_img, w, h, stride, QtGui.QImage.Format.Format_BGR888)            
