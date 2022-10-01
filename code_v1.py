@@ -21,25 +21,25 @@ class VideoThread(QThread):
 class MyGUI(QMainWindow):
     def __init__(self):
         super(MyGUI, self).__init__()
-        uic.loadUi("form.ui", self)
+        uic.loadUi("desain_v1.ui", self)
         self.show()
-        self.cameraList.addItem("camera 1")
-        self.cameraList.addItem("camera 2")
-        #self.label.setSizePolicy(QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.MinimumExpanding)
-        self.frame1.setStyleSheet(
-			"color: rgb(255,0,255);"
-			"background-color: rgb(0,0,0);"
-			"qproperty-alignment: AlignCenter;")
-        self.frame2.setStyleSheet(
-			"color: rgb(255,0,255);"
-			"background-color: rgb(0,0,0);"
-			"qproperty-alignment: AlignCenter;")
+
         myCamera = QCamera()
         cameraDevice = myCamera.cameraDevice()
         cameraDescription = cameraDevice.description()
-        self.cameraList.addItem(cameraDescription)
-        self.testLabel.setFont(QFont("Times", 30))
-        self.testLabel.adjustSize()
+        print(cameraDescription)
+        self.deteksi.setStyleSheet(
+			"color: rgb(255,0,255);"
+			"background-color: rgb(0,0,0);"
+			"qproperty-alignment: AlignCenter;")
+        self.sejajar.setStyleSheet(
+			"color: rgb(255,0,255);"
+			"background-color: rgb(0,0,0);"
+			"qproperty-alignment: AlignCenter;")
+        self.verifikasi.setStyleSheet(
+			"color: rgb(255,0,255);"
+			"background-color: rgb(0,0,0);"
+			"qproperty-alignment: AlignCenter;")
 
         self.thread = VideoThread()
         self.thread.change_pixmap_signal.connect(self.update_image)
@@ -48,17 +48,14 @@ class MyGUI(QMainWindow):
     @pyqtSlot(np.ndarray)
     def update_image(self, cv_img):
             qt_img = self.convert_to_qt(cv_img)
-            self.frame1.resize(cv_img.shape[1], cv_img.shape[0])            
-            self.frame1.adjustSize()
+            self.deteksi.resize(cv_img.shape[1], cv_img.shape[0])            
+            self.deteksi.adjustSize()
 
-            self.frame2.resize(int(cv_img.shape[1]/2), int(cv_img.shape[0]/2))            
-            #self.frame2.adjustSize()
-
-            self.testLabel.setText(str(self.cameraList.currentIndex()))
-            print(self.cameraList.currentIndex())
-            
-            self.frame1.setPixmap(qt_img)
-            self.frame2.setPixmap(qt_img)
+            self.sejajar.resize(int(cv_img.shape[1]/2), int(cv_img.shape[0]/2))            
+            self.sejajar.adjustSize()
+                      
+            self.deteksi.setPixmap(qt_img)
+            self.sejajar.setPixmap(qt_img)
             
 
     def convert_to_qt(self, cv_img):    
