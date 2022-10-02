@@ -8,6 +8,7 @@ import cv2
 from more_itertools import peekable
 import numpy as np
 import sys
+from yunet import YuNet
 
 class VideoThread(QThread):
     change_pixmap_signal = pyqtSignal(np.ndarray)
@@ -16,6 +17,8 @@ class VideoThread(QThread):
         cap = cv2.VideoCapture(0)
         while True:
             ret, cv_img = cap.read()
+            model = YuNet(model_path="face_detection_yunet.onnx")
+            cv_img = model.detect(cv_img)
             if ret:
                 self.change_pixmap_signal.emit(cv_img)
 
