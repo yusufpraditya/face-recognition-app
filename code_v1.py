@@ -1,10 +1,11 @@
 from PyQt6.QtWidgets import QMainWindow, QApplication, QSizePolicy
 from PyQt6 import uic, QtGui
-from PyQt6.QtGui import QImage, QPixmap, QFont
+from PyQt6.QtGui import QImage, QPixmap, QFont, QResizeEvent
 from PyQt6.QtCore import QThread, pyqtSignal, pyqtSlot, Qt
 from PyQt6.QtMultimedia import *
 from PyQt6.QtMultimediaWidgets import *
 import cv2
+from more_itertools import peekable
 import numpy as np
 import sys
 
@@ -24,6 +25,9 @@ class MyGUI(QMainWindow):
         uic.loadUi("desain_v1.ui", self)
         self.show()
 
+        self.display_width = 100
+        self.display_height = 100
+
         myCamera = QCamera()
         cameraDevice = myCamera.cameraDevice()
         cameraDescription = cameraDevice.description()
@@ -41,21 +45,33 @@ class MyGUI(QMainWindow):
 			"background-color: rgb(0,0,0);"
 			"qproperty-alignment: AlignCenter;")
 
+        # Get the resize Event Callback
+        self.resizeEvent = self.label_resize
+        self.deteksi.resizeEvent = self.camera_resize
+
         self.thread = VideoThread()
         self.thread.change_pixmap_signal.connect(self.update_image)
         self.thread.start()
 
+    # Resize Event Callback
+    def label_resize(self, resizeEvent:QResizeEvent):
+        self.deteksi.resize(resizeEvent.size())
+        print("here")
+
+    # Resize Event Callback
+    def camera_resize(self, resizeEvent:QResizeEvent):
+        self.display_width, self.display_height = self.deteksi.width(), self.deteksi.height()
+        print(self.deteksi.width())  
+
     @pyqtSlot(np.ndarray)
     def update_image(self, cv_img):
-            qt_img = self.convert_to_qt(cv_img)
-            self.deteksi.resize(cv_img.shape[1], cv_img.shape[0])            
-            self.deteksi.adjustSize()
-
-            self.sejajar.resize(int(cv_img.shape[1]/2), int(cv_img.shape[0]/2))            
+            qt_img = self.convert_to_qt(cv_img)    
+            self.deteksi.adjustSize()                     
             self.sejajar.adjustSize()
                       
             self.deteksi.setPixmap(qt_img)
-            self.sejajar.setPixmap(qt_img)
+            self.deteksi.setScaledContents(True)            
+            #self.sejajar.setPixmap(qt_img)
             
 
     def convert_to_qt(self, cv_img):    
@@ -67,7 +83,11 @@ class MyGUI(QMainWindow):
             cv_img = cv2.resize(cv_img, dim, interpolation=cv2.INTER_AREA)
             h, w, ch = cv_img.shape
             stride = cv_img.strides[0]
-            convert_to_Qt_format = QtGui.QImage(cv_img, w, h, stride, QtGui.QImage.Format.Format_BGR888)            
+            
+            convert_to_Qt_format = QtGui.QImage(cv_img, w, h, stride, QtGui.QImage.Format.Format_BGR888)    
+            #duplication = convert_to_Qt_format.copy()
+            p = convert_to_Qt_format.scaled(self.display_width, self.display_height, Qt.AspectRatioMode.KeepAspectRatio)   
+             
             return QPixmap.fromImage(convert_to_Qt_format)
 
 def main():
