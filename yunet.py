@@ -40,9 +40,9 @@ class YuNet:
                 cropped_face = cropped_face[bbox[1]:bbox[1] + bbox[3], bbox[0]:bbox[0] + bbox[2]]
                 landmarks = det[4:14].astype(np.int32).reshape((5,2))
                 
-                return image, landmarks
+                return image, cropped_face, landmarks
         else:
-            return None, None
+            return None, None, None
             
 
     def align_face(self, image, face):        

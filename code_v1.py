@@ -12,20 +12,22 @@ import sys
 from yunet import YuNet
 
 class VideoThread(QThread):
-    change_pixmap_signal = pyqtSignal(np.ndarray)
+    change_pixmap_signal = pyqtSignal(np.ndarray, np.ndarray)
     change_pixmap_signal2 = pyqtSignal(np.ndarray)
     change_pixmap_signal3 = pyqtSignal(np.ndarray)
     def run(self):
         cap = cv2.VideoCapture(0)
         while True:
             _, original_img = cap.read()
+            
             model = YuNet(model_path="face_detection_yunet.onnx")
             
-            detected_img, landmarks = model.detect(original_img)  
+            detected_img, face_img, landmarks = model.detect(original_img) 
             if detected_img is not None:
-                self.change_pixmap_signal.emit(detected_img)
+                self.change_pixmap_signal.emit(detected_img, face_img)
+                #self.change_pixmap_signal2.emit(face_img)
             else:
-                self.change_pixmap_signal.emit(original_img)
+                self.change_pixmap_signal.emit(original_img, original_img)
             
         
 
@@ -70,9 +72,11 @@ class MyGUI(QMainWindow):
         self.detection.resizeEvent = self.camera_resize
 
         self.thread = VideoThread()
+        
         self.thread.change_pixmap_signal.connect(self.update_image)
         self.thread.change_pixmap_signal2.connect(self.update_crop)
         self.thread.change_pixmap_signal3.connect(self.update_align)
+        
         self.thread.start()
 
     # Resize Event Callback
@@ -85,12 +89,28 @@ class MyGUI(QMainWindow):
         self.display_width, self.display_height = self.detection.width(), self.detection.height()
         print(self.detection.width())  
 
-    @pyqtSlot(np.ndarray)
-    def update_image(self, cv_img):
-            qt_img = self.convert_to_qt(cv_img)    
-            self.detection.adjustSize()                         
-            self.detection.setPixmap(qt_img)
-            self.detection.setScaledContents(True)        
+    @pyqtSlot(np.ndarray, np.ndarray)
+    def update_image(self, cv_img, face_img): 
+        scale_percent = 100
+            
+        height = int(cv_img.shape[0] * (scale_percent / 100))
+        width = int(cv_img.shape[1] * (scale_percent / 100))
+        dim = (width, height)
+
+
+        qt_img = self.convert_to_qt(cv_img)        
+        #print(face_img)
+        
+        qt_img2 = self.convert_to_qt(face_img)
+        self.crop.adjustSize()                         
+        self.crop.setPixmap(qt_img2)
+        self.crop.setScaledContents(True)
+        
+        self.detection.adjustSize()                         
+        self.detection.setPixmap(qt_img)
+        self.detection.setScaledContents(True)      
+
+           
     
     @pyqtSlot(np.ndarray)
     def update_crop(self, cropped_img):
@@ -113,10 +133,13 @@ class MyGUI(QMainWindow):
             height = int(cv_img.shape[0] * (scale_percent / 100))
             width = int(cv_img.shape[1] * (scale_percent / 100))
             dim = (width, height)
-            cv_img = cv2.resize(cv_img, dim, interpolation=cv2.INTER_AREA)
+            #print(cv_img)
+            print(cv_img.shape)
+            cv_img = cv2.resize(cv_img, dim, interpolation=cv2.INTER_AREA)            
+            cv2.imshow('frame', cv_img)
             h, w, ch = cv_img.shape
             stride = cv_img.strides[0]
-            
+            #print(type(cv_img))
             convert_to_Qt_format = QtGui.QImage(cv_img, w, h, stride, QtGui.QImage.Format.Format_BGR888)    
             #duplication = convert_to_Qt_format.copy()
             p = convert_to_Qt_format.scaled(self.display_width, self.display_height, Qt.AspectRatioMode.KeepAspectRatio)   
