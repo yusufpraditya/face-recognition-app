@@ -14,6 +14,12 @@
    <string>MainWindow</string>
   </property>
   <widget class="QWidget" name="centralwidget">
+   <property name="minimumSize">
+    <size>
+     <width>1280</width>
+     <height>720</height>
+    </size>
+   </property>
    <layout class="QGridLayout" name="gridLayout_2">
     <item row="0" column="0">
      <widget class="QPushButton" name="pushButton">
@@ -25,7 +31,7 @@
     <item row="0" column="1">
      <widget class="QPushButton" name="pushButton_2">
       <property name="text">
-       <string>Tentang</string>
+       <string>About</string>
       </property>
      </widget>
     </item>
@@ -41,11 +47,11 @@
       <item row="1" column="0" rowspan="2" colspan="2">
        <widget class="QGroupBox" name="groupBox_4">
         <property name="title">
-         <string>Deteksi</string>
+         <string>Detection</string>
         </property>
         <layout class="QHBoxLayout" name="horizontalLayout">
          <item>
-          <widget class="QLabel" name="deteksi">
+          <widget class="QLabel" name="detection">
            <property name="minimumSize">
             <size>
              <width>640</width>
@@ -91,7 +97,7 @@
         </property>
         <layout class="QHBoxLayout" name="horizontalLayout_3">
          <item>
-          <widget class="QLabel" name="sejajar">
+          <widget class="QLabel" name="crop">
            <property name="text">
             <string>Crop</string>
            </property>
@@ -101,7 +107,7 @@
           </widget>
          </item>
          <item>
-          <widget class="QLabel" name="sejajar_2">
+          <widget class="QLabel" name="align">
            <property name="text">
             <string>Align</string>
            </property>
@@ -116,11 +122,11 @@
       <item row="2" column="2" colspan="2">
        <widget class="QGroupBox" name="groupBox_6">
         <property name="title">
-         <string>verify</string>
+         <string>Verify</string>
         </property>
         <layout class="QHBoxLayout" name="horizontalLayout_2">
          <item>
-          <widget class="QLabel" name="verifikasi">
+          <widget class="QLabel" name="img1">
            <property name="text">
             <string>img1</string>
            </property>
@@ -130,7 +136,7 @@
           </widget>
          </item>
          <item>
-          <widget class="QLabel" name="verifikasi_2">
+          <widget class="QLabel" name="img2">
            <property name="text">
             <string>img2</string>
            </property>
@@ -154,19 +160,6 @@
         <property name="title">
          <string>Load/save database</string>
         </property>
-        <widget class="QSlider" name="horizontalSlider">
-         <property name="geometry">
-          <rect>
-           <x>260</x>
-           <y>60</y>
-           <width>160</width>
-           <height>22</height>
-          </rect>
-         </property>
-         <property name="orientation">
-          <enum>Qt::Horizontal</enum>
-         </property>
-        </widget>
        </widget>
       </item>
      </layout>

@@ -31,15 +31,29 @@ class YuNet:
         )
     
     def detect(self, image):
+        cropped_face = image.copy()
         faces = self.model.detect(image)
         if faces[1] is not None:
-            for idx, face, in enumerate(faces[1]):
-                coords = face[:-1].astype(np.int32)
-                for i in range(len(coords)):
-                    if coords[i] < 0:
-                        coords[i] = 0
-                cv2.rectangle(image, (coords[0], coords[1]), (coords[0]+coords[2], coords[1]+coords[3]), (0, 255, 0), thickness=2)
-                return image
+            for det in faces[1]:
+                bbox = det[0:4].astype(np.int32)
+                cv2.rectangle(image, (bbox[0], bbox[1]), (bbox[0]+bbox[2], bbox[1]+bbox[3]), (0, 255, 0), 2)
+                cropped_face = cropped_face[bbox[1]:bbox[1] + bbox[3], bbox[0]:bbox[0] + bbox[2]]
+                landmarks = det[4:14].astype(np.int32).reshape((5,2))
+                
+                return image, landmarks
+        else:
+            return None, None
+            
+
+    def align_face(self, image, face):        
+        if face.shape[-1] == (4 + 5 * 2):
+            landmarks = face[4:].reshape(5, 2)
+        else:
+            raise NotImplementedError()
+        warp_mat = self._getSimilarityTransformMatrix(landmarks)
+        aligned_image = cv2.warpAffine(image, warp_mat, self._input_size, flags=cv2.INTER_LINEAR)
+        return aligned_image
+    
         
         
         
