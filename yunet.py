@@ -1,5 +1,7 @@
 import numpy as np
 import cv2
+import math
+from PIL import Image
 
 class YuNet:
     def __init__(self, model_path, input_size=[640, 480], score_threshold=0.7, nms_threshold=0.3, top_k=5000):
@@ -39,20 +41,40 @@ class YuNet:
                 cv2.rectangle(image, (bbox[0], bbox[1]), (bbox[0]+bbox[2], bbox[1]+bbox[3]), (0, 255, 0), 2)
                 cropped_face = cropped_face[bbox[1]:bbox[1] + bbox[3], bbox[0]:bbox[0] + bbox[2]]
                 landmarks = det[4:14].astype(np.int32).reshape((5,2))
-                
-                return image, cropped_face, landmarks
+                return image, cropped_face, landmarks        
         else:
             return None, None, None
-            
+        
 
-    def align_face(self, image, face):        
-        if face.shape[-1] == (4 + 5 * 2):
-            landmarks = face[4:].reshape(5, 2)
+    def align_face(self, image, landmarks):        
+        left_eye = landmarks[0]
+        right_eye = landmarks[1]
+        
+        if left_eye[1] < right_eye[1]:
+            third_point = (right_eye[0], left_eye[1])
+            direction = -1
         else:
-            raise NotImplementedError()
-        warp_mat = self._getSimilarityTransformMatrix(landmarks)
-        aligned_image = cv2.warpAffine(image, warp_mat, self._input_size, flags=cv2.INTER_LINEAR)
-        return aligned_image
+            third_point = (left_eye[0], right_eye[1])
+            direction = 1
+
+        a = self.euclidean_distance(left_eye, third_point)
+        b = self.euclidean_distance(right_eye, left_eye)
+        c = self.euclidean_distance(right_eye, third_point)
+        cos_a = (b*b + c*c - a*a) / (2*b*c)
+        angle = (np.arccos(cos_a) * 180) / math.pi
+        if direction == -1:
+            angle = 90 - angle
+        direction = -1 * direction
+        new_img = Image.fromarray(image)
+        return np.array(new_img.rotate(direction * angle))
+
+    def euclidean_distance(self, a, b):
+        x1 = a[0]; y1 = a[1]
+        x2 = b[0]; y2 = b[1]
+        return math.sqrt(((x2 - x1) * (x2 - x1)) + ((y2 - y1) * (y2 - y1)))
+
+        
+    
     
         
         
