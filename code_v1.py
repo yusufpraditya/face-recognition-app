@@ -30,8 +30,7 @@ class VideoThread(QThread):
                 self.crop_signal.emit(face_img)
                 self.alignment_signal.emit(aligned_img)
             else:
-                pass
-                
+                pass              
 
             
 class MyGUI(QMainWindow):
