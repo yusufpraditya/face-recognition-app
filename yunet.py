@@ -46,27 +46,30 @@ class YuNet:
             return None, None, None
         
 
-    def align_face(self, image, landmarks):        
-        left_eye = landmarks[0]
-        right_eye = landmarks[1]
-        
-        if left_eye[1] < right_eye[1]:
-            third_point = (right_eye[0], left_eye[1])
-            direction = -1
-        else:
-            third_point = (left_eye[0], right_eye[1])
-            direction = 1
+    def align_face(self, image, landmarks):
+        if landmarks is not None:
+            left_eye = landmarks[0]
+            right_eye = landmarks[1]
+            
+            if left_eye[1] < right_eye[1]:
+                third_point = (right_eye[0], left_eye[1])
+                direction = -1
+            else:
+                third_point = (left_eye[0], right_eye[1])
+                direction = 1
 
-        a = self.euclidean_distance(left_eye, third_point)
-        b = self.euclidean_distance(right_eye, left_eye)
-        c = self.euclidean_distance(right_eye, third_point)
-        cos_a = (b*b + c*c - a*a) / (2*b*c)
-        angle = (np.arccos(cos_a) * 180) / math.pi
-        if direction == -1:
-            angle = 90 - angle
-        direction = -1 * direction
-        new_img = Image.fromarray(image)
-        return np.array(new_img.rotate(direction * angle))
+            a = self.euclidean_distance(left_eye, third_point)
+            b = self.euclidean_distance(right_eye, left_eye)
+            c = self.euclidean_distance(right_eye, third_point)
+            cos_a = (b*b + c*c - a*a) / (2*b*c)
+            angle = (np.arccos(cos_a) * 180) / math.pi
+            if direction == -1:
+                angle = 90 - angle
+            direction = -1 * direction
+            new_img = Image.fromarray(image)
+            return np.array(new_img.rotate(direction * angle))
+        else:
+            return None
 
     def euclidean_distance(self, a, b):
         x1 = a[0]; y1 = a[1]

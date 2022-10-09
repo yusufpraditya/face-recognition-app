@@ -23,14 +23,17 @@ class VideoThread(QThread):
             
             model = YuNet(model_path="face_detection_yunet.onnx")
             
-            detected_img, face_img, landmarks = model.detect(original_img)             
-            aligned_img = model.align_face(face_img, landmarks)
-            if detected_img is not None and landmarks is not None:                
+            detected_img, face_img, landmarks = model.detect(original_img)      
+            try:       
+                aligned_img = model.align_face(face_img, landmarks)
+            except:
+                print("error")
+            if detected_img is not None and landmarks is not None and aligned_img is not None:                
                 self.detection_signal.emit(detected_img)
                 self.crop_signal.emit(face_img)
                 self.alignment_signal.emit(aligned_img)
             else:
-                pass              
+                self.detection_signal.emit(original_img)
 
             
 class MyGUI(QMainWindow):
