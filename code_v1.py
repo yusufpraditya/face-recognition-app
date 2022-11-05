@@ -1,5 +1,5 @@
 from shutil import ExecError
-from PyQt6.QtWidgets import QMainWindow, QApplication, QSizePolicy
+from PyQt6.QtWidgets import QMainWindow, QApplication, QSizePolicy, QLabel
 from PyQt6 import uic, QtGui
 from PyQt6.QtGui import QPixmap, QResizeEvent
 from PyQt6.QtCore import QThread, pyqtSignal, pyqtSlot, Qt
@@ -26,8 +26,8 @@ class VideoThread(QThread):
             detected_img, face_img, landmarks = model.detect(original_img)      
             try:       
                 aligned_img = model.align_face(face_img, landmarks)
-            except:
-                print("error")
+            except Exception as e:
+                print(e)
             if detected_img is not None and landmarks is not None and aligned_img is not None:                
                 self.detection_signal.emit(detected_img)
                 self.crop_signal.emit(face_img)
@@ -49,6 +49,12 @@ class MyGUI(QMainWindow):
         cameraDevice = myCamera.cameraDevice()
         cameraDescription = cameraDevice.description()
         print(cameraDescription)
+
+        self.crop.setMaximumHeight(self.crop.height())
+        self.crop.setMaximumWidth(self.crop.width())
+        self.align.setMaximumHeight(self.align.height())
+        self.align.setMaximumWidth(self.align.width())
+
         self.detection.setStyleSheet(
 			"color: rgb(255,0,255);"
 			"background-color: rgb(0,0,0);"
@@ -84,7 +90,7 @@ class MyGUI(QMainWindow):
         qt_img = QPixmap.fromImage(qt_format)        
         self.detection.adjustSize()                    
         self.detection.setPixmap(qt_img)
-        self.detection.setScaledContents(True)
+        #self.detection.setScaledContents(True)
 
     @pyqtSlot(np.ndarray)
     def update_crop(self, face_img):
@@ -95,7 +101,7 @@ class MyGUI(QMainWindow):
         qt_img = QPixmap.fromImage(qt_format)
         self.crop.adjustSize()
         self.crop.setPixmap(qt_img)
-        self.crop.setScaledContents(True)
+        #self.crop.setScaledContents(True)
 
     @pyqtSlot(np.ndarray)
     def update_align(self, face_img):        
@@ -105,7 +111,7 @@ class MyGUI(QMainWindow):
         qt_img = QPixmap.fromImage(qt_format)
         self.align.adjustSize()
         self.align.setPixmap(qt_img)
-        self.align.setScaledContents(True)
+        #self.align.setScaledContents(True)
 
 def main():
     app = QApplication([])
