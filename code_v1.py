@@ -1,7 +1,7 @@
 from shutil import ExecError
 from PyQt6.QtWidgets import QMainWindow, QApplication, QSizePolicy, QLabel
 from PyQt6 import uic, QtGui
-from PyQt6.QtGui import QPixmap, QResizeEvent
+from PyQt6.QtGui import QPixmap, QResizeEvent, QBitmap
 from PyQt6.QtCore import QThread, pyqtSignal, pyqtSlot, Qt
 from PyQt6.QtMultimedia import *
 from PyQt6.QtMultimediaWidgets import *
@@ -108,6 +108,7 @@ class MyGUI(QMainWindow):
         h, w, _ = face_img.shape
         bytes_per_line = 3 * w
         qt_format = QtGui.QImage(face_img, w, h, bytes_per_line, QtGui.QImage.Format.Format_BGR888)
+        print(QtGui.QImage.Format.Format_BGR888)
         qt_img = QPixmap.fromImage(qt_format)
         self.align.adjustSize()
         self.align.setPixmap(qt_img)
