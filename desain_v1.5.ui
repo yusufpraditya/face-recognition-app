@@ -185,7 +185,7 @@
      </layout>
     </item>
     <item>
-     <layout class="QHBoxLayout" name="horizontalLayout_5" stretch="1,1">
+     <layout class="QHBoxLayout" name="horizontalLayout_5" stretch="1,0,1">
       <item>
        <widget class="QGroupBox" name="groupBox">
         <property name="sizePolicy">
@@ -330,6 +330,19 @@
          </property>
         </widget>
        </widget>
+      </item>
+      <item>
+       <spacer name="horizontalSpacer_2">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>130</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
       </item>
       <item>
        <widget class="QStackedWidget" name="stackedWidget">
@@ -524,7 +537,7 @@
              <property name="geometry">
               <rect>
                <x>620</x>
-               <y>40</y>
+               <y>15</y>
                <width>75</width>
                <height>23</height>
               </rect>
@@ -537,13 +550,52 @@
              <property name="geometry">
               <rect>
                <x>620</x>
-               <y>70</y>
+               <y>45</y>
+               <width>75</width>
+               <height>23</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>Pause</string>
+             </property>
+            </widget>
+            <widget class="QPushButton" name="pushButton_8">
+             <property name="geometry">
+              <rect>
+               <x>210</x>
+               <y>100</y>
+               <width>75</width>
+               <height>23</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>Terapkan</string>
+             </property>
+            </widget>
+            <widget class="QPushButton" name="pushButton_10">
+             <property name="geometry">
+              <rect>
+               <x>620</x>
+               <y>100</y>
                <width>75</width>
                <height>23</height>
               </rect>
              </property>
              <property name="text">
               <string>Stop</string>
+             </property>
+            </widget>
+            <widget class="QPushButton" name="pushButton_11">
+             <property name="geometry">
+              <rect>
+               <x>620</x>
+               <y>72</y>
+               <width>75</width>
+               <height>23</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>Register</string>
              </property>
             </widget>
            </widget>
