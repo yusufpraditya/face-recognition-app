@@ -168,6 +168,19 @@
         <property name="checked">
          <bool>false</bool>
         </property>
+        <widget class="QLabel" name="label_13">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>30</y>
+           <width>151</width>
+           <height>16</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Threshold cosine similarity</string>
+         </property>
+        </widget>
        </widget>
       </item>
       <item row="2" column="2" rowspan="2">
@@ -175,11 +188,32 @@
         <property name="title">
          <string>Info</string>
         </property>
-        <layout class="QVBoxLayout" name="verticalLayout_2">
-         <item>
-          <widget class="QPlainTextEdit" name="plainTextEdit"/>
-         </item>
-        </layout>
+        <widget class="QLabel" name="label_11">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>20</y>
+           <width>141</width>
+           <height>16</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Nama wajah yang terdaftar</string>
+         </property>
+        </widget>
+        <widget class="QLabel" name="label_12">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>120</y>
+           <width>141</width>
+           <height>16</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Terdeteksi sebagai</string>
+         </property>
+        </widget>
        </widget>
       </item>
      </layout>
@@ -338,7 +372,7 @@
         </property>
         <property name="sizeHint" stdset="0">
          <size>
-          <width>130</width>
+          <width>170</width>
           <height>20</height>
          </size>
         </property>
@@ -399,7 +433,7 @@
               </rect>
              </property>
              <property name="text">
-              <string>Lokasi penyimpanan database wajah:</string>
+              <string>Lokasi penyimpanan gambar wajah:</string>
              </property>
             </widget>
             <widget class="QLineEdit" name="lineEdit_3">
@@ -536,7 +570,7 @@
             <widget class="QPushButton" name="pushButton_3">
              <property name="geometry">
               <rect>
-               <x>620</x>
+               <x>500</x>
                <y>15</y>
                <width>75</width>
                <height>23</height>
@@ -549,7 +583,7 @@
             <widget class="QPushButton" name="pushButton_4">
              <property name="geometry">
               <rect>
-               <x>620</x>
+               <x>500</x>
                <y>45</y>
                <width>75</width>
                <height>23</height>
@@ -575,7 +609,7 @@
             <widget class="QPushButton" name="pushButton_10">
              <property name="geometry">
               <rect>
-               <x>620</x>
+               <x>500</x>
                <y>100</y>
                <width>75</width>
                <height>23</height>
@@ -588,7 +622,7 @@
             <widget class="QPushButton" name="pushButton_11">
              <property name="geometry">
               <rect>
-               <x>620</x>
+               <x>500</x>
                <y>72</y>
                <width>75</width>
                <height>23</height>
@@ -596,6 +630,19 @@
              </property>
              <property name="text">
               <string>Register</string>
+             </property>
+            </widget>
+            <widget class="QPushButton" name="pushButton_14">
+             <property name="geometry">
+              <rect>
+               <x>590</x>
+               <y>20</y>
+               <width>75</width>
+               <height>101</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>Simpan</string>
              </property>
             </widget>
            </widget>
@@ -624,6 +671,166 @@
             <property name="title">
              <string>Pengenalan wajah</string>
             </property>
+            <widget class="QRadioButton" name="radioButton_5">
+             <property name="geometry">
+              <rect>
+               <x>90</x>
+               <y>20</y>
+               <width>82</width>
+               <height>17</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>Video/foto</string>
+             </property>
+            </widget>
+            <widget class="QRadioButton" name="radioButton_6">
+             <property name="geometry">
+              <rect>
+               <x>20</x>
+               <y>20</y>
+               <width>82</width>
+               <height>17</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>Kamera</string>
+             </property>
+            </widget>
+            <widget class="QComboBox" name="comboBox_2">
+             <property name="geometry">
+              <rect>
+               <x>67</x>
+               <y>44</y>
+               <width>131</width>
+               <height>22</height>
+              </rect>
+             </property>
+            </widget>
+            <widget class="QLabel" name="label_8">
+             <property name="geometry">
+              <rect>
+               <x>220</x>
+               <y>46</y>
+               <width>61</width>
+               <height>16</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>Video/foto:</string>
+             </property>
+            </widget>
+            <widget class="QLabel" name="label_9">
+             <property name="geometry">
+              <rect>
+               <x>20</x>
+               <y>48</y>
+               <width>47</width>
+               <height>13</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>Kamera:</string>
+             </property>
+            </widget>
+            <widget class="QPushButton" name="pushButton_12">
+             <property name="geometry">
+              <rect>
+               <x>440</x>
+               <y>41</y>
+               <width>75</width>
+               <height>23</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>Pilih</string>
+             </property>
+            </widget>
+            <widget class="QLineEdit" name="lineEdit_6">
+             <property name="geometry">
+              <rect>
+               <x>290</x>
+               <y>43</y>
+               <width>141</width>
+               <height>20</height>
+              </rect>
+             </property>
+            </widget>
+            <widget class="QPushButton" name="pushButton_13">
+             <property name="geometry">
+              <rect>
+               <x>580</x>
+               <y>19</y>
+               <width>75</width>
+               <height>23</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>Start</string>
+             </property>
+            </widget>
+            <widget class="QPushButton" name="pushButton_15">
+             <property name="geometry">
+              <rect>
+               <x>580</x>
+               <y>80</y>
+               <width>75</width>
+               <height>23</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>Stop</string>
+             </property>
+            </widget>
+            <widget class="QPushButton" name="pushButton_16">
+             <property name="geometry">
+              <rect>
+               <x>580</x>
+               <y>49</y>
+               <width>75</width>
+               <height>23</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>Pause</string>
+             </property>
+            </widget>
+            <widget class="QLabel" name="label_10">
+             <property name="geometry">
+              <rect>
+               <x>20</x>
+               <y>81</y>
+               <width>71</width>
+               <height>16</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>File database:</string>
+             </property>
+            </widget>
+            <widget class="QLineEdit" name="lineEdit_7">
+             <property name="geometry">
+              <rect>
+               <x>100</x>
+               <y>80</y>
+               <width>131</width>
+               <height>20</height>
+              </rect>
+             </property>
+            </widget>
+            <widget class="QPushButton" name="pushButton_17">
+             <property name="geometry">
+              <rect>
+               <x>240</x>
+               <y>80</y>
+               <width>75</width>
+               <height>23</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>Pilih</string>
+             </property>
+            </widget>
            </widget>
           </item>
          </layout>
