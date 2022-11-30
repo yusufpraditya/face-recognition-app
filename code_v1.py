@@ -1,5 +1,5 @@
 from shutil import ExecError
-from PyQt6.QtWidgets import QMainWindow, QApplication, QSizePolicy, QLabel
+from PyQt6.QtWidgets import QMainWindow, QApplication, QSizePolicy, QLabel, QFileDialog
 from PyQt6 import uic, QtGui
 from PyQt6.QtGui import QPixmap, QResizeEvent, QBitmap
 from PyQt6.QtCore import QThread, pyqtSignal, pyqtSlot, Qt
@@ -39,48 +39,69 @@ class VideoThread(QThread):
 class MyGUI(QMainWindow):
     def __init__(self):
         super(MyGUI, self).__init__()
-        uic.loadUi("desain_v1.ui", self)       
+        uic.loadUi("desain_v3.ui", self)       
         self.show()
-
+        self.pilihanTab.setEnabled(False)
         self.display_width = 100
         self.display_height = 100
 
-        myCamera = QCamera()
-        cameraDevice = myCamera.cameraDevice()
-        cameraDescription = cameraDevice.description()
-        print(cameraDescription)
+        # Dialog file model deteksi wajah
+        self.deteksi_wajah.clicked.connect(self.dialog_deteksi_wajah)
+
+        # Dialog file model pengenalan wajah
+        self.pengenalan_wajah.clicked.connect(self.dialog_pengenalan_wajah)
+
+        # Pilih tab registrasi/pengenalan
+        self.tombolRegistrasi.clicked.connect(self.tab_registrasi)
+        self.tombolPengenalan.clicked.connect(self.tab_pengenalan)
+
+        # Pilih input
+        self.tombolKameraRegistrasi.clicked.connect(self.box_kamera_registrasi)
+        self.tombolFotoRegistrasi.clicked.connect(self.line_foto_registrasi)
 
         self.crop.setMaximumHeight(self.crop.height())
         self.crop.setMaximumWidth(self.crop.width())
         self.align.setMaximumHeight(self.align.height())
         self.align.setMaximumWidth(self.align.width())
 
-        self.detection.setStyleSheet(
-			"color: rgb(255,0,255);"
-			"background-color: rgb(0,0,0);"
-			"qproperty-alignment: AlignCenter;")
-        self.crop.setStyleSheet(
-			"color: rgb(255,0,255);"
-			"background-color: rgb(0,0,0);"
-			"qproperty-alignment: AlignCenter;")
-        self.align.setStyleSheet(
-			"color: rgb(255,0,255);"
-			"background-color: rgb(0,0,0);"
-			"qproperty-alignment: AlignCenter;")
-        self.img1.setStyleSheet(
-			"color: rgb(255,0,255);"
-			"background-color: rgb(0,0,0);"
-			"qproperty-alignment: AlignCenter;")
-        self.img2.setStyleSheet(
-			"color: rgb(255,0,255);"
-			"background-color: rgb(0,0,0);"
-			"qproperty-alignment: AlignCenter;")
-
         self.thread = VideoThread()
         self.thread.detection_signal.connect(self.update_detection)
         self.thread.crop_signal.connect(self.update_crop)
         self.thread.alignment_signal.connect(self.update_align)
-        self.thread.start()
+        #self.thread.start()
+
+    def dialog_deteksi_wajah(self):        
+        file = QFileDialog.getOpenFileName(self, "Masukkan file model deteksi wajah", "", "ONNX File (*.onnx)")
+        if file:
+            self.lineDeteksi.setText(str(file[0]))
+    
+    def dialog_pengenalan_wajah(self):
+        file = QFileDialog.getOpenFileName(self, "Masukkan file model pengenalan wajah", "", "ONNX File (*.onnx)")
+        if file:
+            self.linePengenalan.setText(str(file[0]))
+    
+    def tab_registrasi(self):
+        self.pilihanTab.setEnabled(True)
+        self.pilihanTab.setCurrentIndex(0)
+    
+    def tab_pengenalan(self):
+        self.pilihanTab.setEnabled(True)
+        self.pilihanTab.setCurrentIndex(1)
+    
+    def box_kamera_registrasi(self):
+        self.boxKameraRegistrasi.setEnabled(True)
+        self.lineFotoRegistrasi.setEnabled(False)
+        self.fotoRegistrasi.setEnabled(False)
+
+        # Tambah list kamera ke combobox
+        cameraList = QMediaDevices.videoInputs()        
+        for c in cameraList:
+            self.boxKameraRegistrasi.addItem(c.description())
+    
+    def line_foto_registrasi(self):
+        self.boxKameraRegistrasi.setEnabled(False)
+        self.lineFotoRegistrasi.setEnabled(True)
+        self.fotoRegistrasi.setEnabled(True)
 
     @pyqtSlot(np.ndarray)
     def update_detection(self, cv_img): 

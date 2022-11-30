@@ -160,7 +160,7 @@
       <item row="0" column="2" rowspan="2">
        <widget class="QGroupBox" name="boxRTSetting">
         <property name="title">
-         <string>Realtime setting</string>
+         <string>Threshold cosine similarity</string>
         </property>
         <property name="checkable">
          <bool>false</bool>
@@ -168,17 +168,39 @@
         <property name="checked">
          <bool>false</bool>
         </property>
-        <widget class="QLabel" name="label_13">
+        <widget class="QDoubleSpinBox" name="doubleSpinBox">
          <property name="geometry">
           <rect>
-           <x>10</x>
+           <x>20</x>
            <y>30</y>
-           <width>151</width>
-           <height>16</height>
+           <width>101</width>
+           <height>22</height>
+          </rect>
+         </property>
+         <property name="decimals">
+          <number>3</number>
+         </property>
+         <property name="maximum">
+          <double>1.000000000000000</double>
+         </property>
+         <property name="singleStep">
+          <double>0.100000000000000</double>
+         </property>
+         <property name="value">
+          <double>0.500000000000000</double>
+         </property>
+        </widget>
+        <widget class="QPushButton" name="pushButton_18">
+         <property name="geometry">
+          <rect>
+           <x>20</x>
+           <y>60</y>
+           <width>75</width>
+           <height>23</height>
           </rect>
          </property>
          <property name="text">
-          <string>Threshold cosine similarity</string>
+          <string>Terapkan</string>
          </property>
         </widget>
        </widget>
@@ -212,6 +234,19 @@
          </property>
          <property name="text">
           <string>Terdeteksi sebagai</string>
+         </property>
+        </widget>
+        <widget class="QLabel" name="label_13">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>200</y>
+           <width>141</width>
+           <height>16</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Nilai cosine similarity</string>
          </property>
         </widget>
        </widget>
