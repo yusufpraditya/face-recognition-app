@@ -59,6 +59,8 @@ class MyGUI(QMainWindow):
         self.tombolKameraRegistrasi.clicked.connect(self.box_kamera_registrasi)
         self.tombolFotoRegistrasi.clicked.connect(self.line_foto_registrasi)
 
+        self.lokasiWajah.clicked.connect(self.dialog_folder_wajah)
+
         self.crop.setMaximumHeight(self.crop.height())
         self.crop.setMaximumWidth(self.crop.width())
         self.align.setMaximumHeight(self.align.height())
@@ -102,6 +104,11 @@ class MyGUI(QMainWindow):
         self.boxKameraRegistrasi.setEnabled(False)
         self.lineFotoRegistrasi.setEnabled(True)
         self.fotoRegistrasi.setEnabled(True)
+
+    def dialog_folder_wajah(self):
+        direktori = QFileDialog.getExistingDirectory(self, "Pilih folder penyimpanan wajah")
+        if direktori:
+            self.lineLokasi.setText(str(direktori))
 
     @pyqtSlot(np.ndarray)
     def update_detection(self, cv_img): 
