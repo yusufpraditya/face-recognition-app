@@ -57,9 +57,13 @@ class MyGUI(QMainWindow):
 
         # Pilih input
         self.tombolKameraRegistrasi.clicked.connect(self.box_kamera_registrasi)
-        self.tombolFotoRegistrasi.clicked.connect(self.line_foto_registrasi)
+        self.tombolFotoRegistrasi.clicked.connect(self.line_foto_registrasi)       
 
+        # Lokasi penyimpanan gambar wajah
         self.lokasiWajah.clicked.connect(self.dialog_folder_wajah)
+
+        # Edit nama wajah
+        self.namaWajah.clicked.connect(self.nama_wajah)
 
         self.crop.setMaximumHeight(self.crop.height())
         self.crop.setMaximumWidth(self.crop.width())
@@ -94,6 +98,7 @@ class MyGUI(QMainWindow):
         self.boxKameraRegistrasi.setEnabled(True)
         self.lineFotoRegistrasi.setEnabled(False)
         self.fotoRegistrasi.setEnabled(False)
+        self.boxKameraRegistrasi.clear()
 
         # Tambah list kamera ke combobox
         cameraList = QMediaDevices.videoInputs()        
@@ -109,6 +114,14 @@ class MyGUI(QMainWindow):
         direktori = QFileDialog.getExistingDirectory(self, "Pilih folder penyimpanan wajah")
         if direktori:
             self.lineLokasi.setText(str(direktori))
+    
+    def nama_wajah(self):
+        if self.namaWajah.text() == "Terapkan":
+            self.namaWajah.setText("Ganti")            
+            self.lineNamaWajah.setEnabled(False)
+        else:
+            self.namaWajah.setText("Terapkan")
+            self.lineNamaWajah.setEnabled(True)
 
     @pyqtSlot(np.ndarray)
     def update_detection(self, cv_img): 
