@@ -9,6 +9,7 @@ import cv2
 from more_itertools import peekable
 import numpy as np
 import sys
+import os
 from yunet import YuNet
 
 class VideoThread(QThread):
@@ -19,7 +20,8 @@ class VideoThread(QThread):
 
     global cameraIndex, file_model_deteksi, file_model_pengenalan
 
-    def run(self):        
+    def run(self):     
+        global aligned_img   
         if cameraIndex == 0:
             cap = cv2.VideoCapture(cameraIndex)
         if cameraIndex == 1:
@@ -84,6 +86,7 @@ class MyGUI(QMainWindow):
         # Tombol
         self.btnStartRegistrasi.clicked.connect(self.tombol_start)
         self.btnPauseRegistrasi.clicked.connect(self.tombol_pause)
+        self.btnRegister.clicked.connect(self.tombol_register)
         
 
         self.crop.setMaximumHeight(self.crop.height())
@@ -157,13 +160,22 @@ class MyGUI(QMainWindow):
             cameraIndex = self.boxKameraRegistrasi.currentIndex()
             self.btnStartRegistrasi.setEnabled(False)      
             self.btnPauseRegistrasi.setEnabled(True)          
+            self.btnStopRegistrasi.setEnabled(True)
             self.thread.start()
-        
-    
+            
     def tombol_pause(self):
         self.btnStartRegistrasi.setEnabled(True)
         self.btnPauseRegistrasi.setEnabled(False)
+        self.btnStopRegistrasi.setEnabled(True)
         self.thread.stop()
+    
+    def tombol_register(self):
+        global aligned_img
+        
+        if self.lnLokasi.text() == "":
+            QMessageBox.information(None, "Error", "Mohon masukkan folder penyimpanan database.")
+        else:
+            cv2.imwrite(self.lnLokasi.text() + "/test.jpg", aligned_img)
 
     @pyqtSlot(np.ndarray)
     def update_detection(self, cv_img): 
@@ -187,7 +199,7 @@ class MyGUI(QMainWindow):
         #self.crop.setScaledContents(True)
 
     @pyqtSlot(np.ndarray)
-    def update_align(self, face_img):        
+    def update_align(self, face_img):
         h, w, _ = face_img.shape
         bytes_per_line = 3 * w
         qt_format = QtGui.QImage(face_img, w, h, bytes_per_line, QtGui.QImage.Format.Format_BGR888)
