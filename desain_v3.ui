@@ -313,86 +313,7 @@ qproperty-alignment: AlignCenter;</string>
           <string>Setting</string>
          </property>
          <layout class="QGridLayout" name="gridLayout_5">
-          <item row="0" column="0">
-           <layout class="QGridLayout" name="gridLayout_3">
-            <item row="0" column="0">
-             <widget class="QLabel" name="label_7">
-              <property name="text">
-               <string>Model deteksi wajah</string>
-              </property>
-             </widget>
-            </item>
-            <item row="0" column="1">
-             <widget class="QLineEdit" name="lineDeteksi">
-              <property name="dragEnabled">
-               <bool>false</bool>
-              </property>
-              <property name="readOnly">
-               <bool>true</bool>
-              </property>
-             </widget>
-            </item>
-            <item row="0" column="2">
-             <widget class="QPushButton" name="deteksi_wajah">
-              <property name="text">
-               <string>Pilih</string>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="0">
-             <widget class="QLabel" name="label_8">
-              <property name="text">
-               <string>Model pengenalan wajah</string>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="1">
-             <widget class="QLineEdit" name="linePengenalan">
-              <property name="readOnly">
-               <bool>true</bool>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="2">
-             <widget class="QPushButton" name="pengenalan_wajah">
-              <property name="text">
-               <string>Pilih</string>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </item>
-          <item row="1" column="0">
-           <layout class="QHBoxLayout" name="horizontalLayout_10" stretch="1,2">
-            <item>
-             <widget class="QRadioButton" name="tombolRegistrasi">
-              <property name="text">
-               <string>Registrasi wajah</string>
-              </property>
-              <property name="checkable">
-               <bool>true</bool>
-              </property>
-              <property name="checked">
-               <bool>false</bool>
-              </property>
-              <property name="autoRepeat">
-               <bool>false</bool>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QRadioButton" name="tombolPengenalan">
-              <property name="text">
-               <string>Pengenalan wajah</string>
-              </property>
-              <property name="checked">
-               <bool>false</bool>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </item>
-          <item row="2" column="0">
+          <item row="3" column="0">
            <layout class="QGridLayout" name="gridLayout_4" columnstretch="2,1,1">
             <item row="0" column="0">
              <widget class="QLabel" name="label_9">
@@ -402,7 +323,7 @@ qproperty-alignment: AlignCenter;</string>
              </widget>
             </item>
             <item row="0" column="1">
-             <widget class="QDoubleSpinBox" name="doubleSpinBox">
+             <widget class="QDoubleSpinBox" name="valSimilarity">
               <property name="enabled">
                <bool>false</bool>
               </property>
@@ -421,7 +342,7 @@ qproperty-alignment: AlignCenter;</string>
              </widget>
             </item>
             <item row="0" column="2">
-             <widget class="QPushButton" name="pushButton_3">
+             <widget class="QPushButton" name="btnSimilarity">
               <property name="enabled">
                <bool>false</bool>
               </property>
@@ -441,6 +362,85 @@ qproperty-alignment: AlignCenter;</string>
                <bool>false</bool>
               </property>
               <property name="flat">
+               <bool>false</bool>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item row="1" column="0">
+           <layout class="QGridLayout" name="gridLayout_3">
+            <item row="1" column="2">
+             <widget class="QPushButton" name="btnModelPengenalan">
+              <property name="text">
+               <string>Pilih</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="1">
+             <widget class="QLineEdit" name="lnPengenalan">
+              <property name="readOnly">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="0">
+             <widget class="QLabel" name="label_7">
+              <property name="text">
+               <string>Model deteksi wajah</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="1">
+             <widget class="QLineEdit" name="lnDeteksi">
+              <property name="dragEnabled">
+               <bool>false</bool>
+              </property>
+              <property name="readOnly">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="0">
+             <widget class="QLabel" name="label_8">
+              <property name="text">
+               <string>Model pengenalan wajah</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="2">
+             <widget class="QPushButton" name="btnModelDeteksi">
+              <property name="text">
+               <string>Pilih</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item row="0" column="0">
+           <layout class="QHBoxLayout" name="horizontalLayout_10" stretch="1,2">
+            <item>
+             <widget class="QRadioButton" name="btnRegistrasi">
+              <property name="text">
+               <string>Registrasi wajah</string>
+              </property>
+              <property name="checkable">
+               <bool>true</bool>
+              </property>
+              <property name="checked">
+               <bool>false</bool>
+              </property>
+              <property name="autoRepeat">
+               <bool>false</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QRadioButton" name="btnPengenalan">
+              <property name="text">
+               <string>Pengenalan wajah</string>
+              </property>
+              <property name="checked">
                <bool>false</bool>
               </property>
              </widget>
@@ -509,14 +509,14 @@ qproperty-alignment: AlignCenter;</string>
               <item row="0" column="0">
                <layout class="QHBoxLayout" name="horizontalLayout_11" stretch="1,2">
                 <item>
-                 <widget class="QRadioButton" name="tombolKameraRegistrasi">
+                 <widget class="QRadioButton" name="btnKameraRegistrasi">
                   <property name="text">
                    <string>Kamera</string>
                   </property>
                  </widget>
                 </item>
                 <item>
-                 <widget class="QRadioButton" name="tombolFotoRegistrasi">
+                 <widget class="QRadioButton" name="btnFotoRegistrasi">
                   <property name="text">
                    <string>Foto</string>
                   </property>
@@ -533,28 +533,28 @@ qproperty-alignment: AlignCenter;</string>
                  <number>16</number>
                 </property>
                 <item>
-                 <widget class="QPushButton" name="pushButton_9">
+                 <widget class="QPushButton" name="btnStartRegistrasi">
                   <property name="text">
                    <string>Start</string>
                   </property>
                  </widget>
                 </item>
                 <item>
-                 <widget class="QPushButton" name="pushButton_10">
+                 <widget class="QPushButton" name="btnPauseRegistrasi">
                   <property name="text">
                    <string>Pause</string>
                   </property>
                  </widget>
                 </item>
                 <item>
-                 <widget class="QPushButton" name="pushButton_11">
+                 <widget class="QPushButton" name="btnRegister">
                   <property name="text">
                    <string>Register</string>
                   </property>
                  </widget>
                 </item>
                 <item>
-                 <widget class="QPushButton" name="pushButton_12">
+                 <widget class="QPushButton" name="btnStopRegistrasi">
                   <property name="text">
                    <string>Stop</string>
                   </property>
@@ -563,7 +563,7 @@ qproperty-alignment: AlignCenter;</string>
                </layout>
               </item>
               <item row="0" column="2" rowspan="2">
-               <widget class="QPushButton" name="pushButton_13">
+               <widget class="QPushButton" name="btnSave">
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
                   <horstretch>0</horstretch>
@@ -602,14 +602,14 @@ qproperty-alignment: AlignCenter;</string>
                  </widget>
                 </item>
                 <item row="1" column="1">
-                 <widget class="QLineEdit" name="lineFotoRegistrasi">
+                 <widget class="QLineEdit" name="lnFotoRegistrasi">
                   <property name="enabled">
                    <bool>false</bool>
                   </property>
                  </widget>
                 </item>
                 <item row="1" column="2">
-                 <widget class="QPushButton" name="fotoRegistrasi">
+                 <widget class="QPushButton" name="btnLokasiFoto">
                   <property name="enabled">
                    <bool>false</bool>
                   </property>
@@ -621,12 +621,12 @@ qproperty-alignment: AlignCenter;</string>
                 <item row="2" column="0">
                  <widget class="QLabel" name="label_12">
                   <property name="text">
-                   <string>Lokasi penyimpanan gambar wajah</string>
+                   <string>Lokasi penyimpanan database</string>
                   </property>
                  </widget>
                 </item>
                 <item row="2" column="1">
-                 <widget class="QLineEdit" name="lineLokasi">
+                 <widget class="QLineEdit" name="lnLokasi">
                   <property name="dragEnabled">
                    <bool>false</bool>
                   </property>
@@ -636,7 +636,7 @@ qproperty-alignment: AlignCenter;</string>
                  </widget>
                 </item>
                 <item row="2" column="2">
-                 <widget class="QPushButton" name="lokasiWajah">
+                 <widget class="QPushButton" name="btnSimpanWajah">
                   <property name="text">
                    <string>Pilih</string>
                   </property>
@@ -650,10 +650,10 @@ qproperty-alignment: AlignCenter;</string>
                  </widget>
                 </item>
                 <item row="3" column="1">
-                 <widget class="QLineEdit" name="lineNamaWajah"/>
+                 <widget class="QLineEdit" name="lnNamaWajah"/>
                 </item>
                 <item row="3" column="2">
-                 <widget class="QPushButton" name="namaWajah">
+                 <widget class="QPushButton" name="btnNamaWajah">
                   <property name="text">
                    <string>Terapkan</string>
                   </property>

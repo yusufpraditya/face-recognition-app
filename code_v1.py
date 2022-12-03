@@ -16,9 +16,17 @@ class VideoThread(QThread):
     detection_signal = pyqtSignal(np.ndarray)
     crop_signal = pyqtSignal(np.ndarray)
     alignment_signal = pyqtSignal(np.ndarray)
-    def run(self):
-        cap = cv2.VideoCapture(0)
-        while True:
+    global cameraIndex
+
+    def run(self):        
+        if cameraIndex == 0:
+            cap = cv2.VideoCapture(cameraIndex)
+        if cameraIndex == 1:
+            cap = cv2.VideoCapture(cameraIndex,cv2.CAP_DSHOW)
+
+        self.isActive = True
+
+        while self.isActive:
             _, original_img = cap.read()
             
             model = YuNet(model_path="face_detection_yunet.onnx")
@@ -35,35 +43,52 @@ class VideoThread(QThread):
             else:
                 self.detection_signal.emit(original_img)
 
+    def stop(self):
+        self.isActive = False
+        self.quit()
+
             
 class MyGUI(QMainWindow):
     def __init__(self):
         super(MyGUI, self).__init__()
         uic.loadUi("desain_v3.ui", self)       
         self.show()
-        self.pilihanTab.setEnabled(False)
+        
         self.display_width = 100
         self.display_height = 100
 
-        # Dialog file model deteksi wajah
-        self.deteksi_wajah.clicked.connect(self.dialog_deteksi_wajah)
-
-        # Dialog file model pengenalan wajah
-        self.pengenalan_wajah.clicked.connect(self.dialog_pengenalan_wajah)
+        self.pilihanTab.setEnabled(False)
+        self.btnPauseRegistrasi.setEnabled(False)
+        self.btnStopRegistrasi.setEnabled(False)
+        self.lnDeteksi.setEnabled(False)
+        self.lnPengenalan.setEnabled(False)
+        self.btnModelDeteksi.setEnabled(False)
+        self.btnModelPengenalan.setEnabled(False)
 
         # Pilih tab registrasi/pengenalan
-        self.tombolRegistrasi.clicked.connect(self.tab_registrasi)
-        self.tombolPengenalan.clicked.connect(self.tab_pengenalan)
+        self.btnRegistrasi.clicked.connect(self.tab_registrasi)
+        self.btnPengenalan.clicked.connect(self.tab_pengenalan)
+
+        # Dialog file model deteksi wajah
+        self.btnModelDeteksi.clicked.connect(self.dialog_deteksi_wajah)
+
+        # Dialog file model pengenalan wajah
+        self.btnModelPengenalan.clicked.connect(self.dialog_pengenalan_wajah)        
 
         # Pilih input
-        self.tombolKameraRegistrasi.clicked.connect(self.box_kamera_registrasi)
-        self.tombolFotoRegistrasi.clicked.connect(self.line_foto_registrasi)       
+        self.btnKameraRegistrasi.clicked.connect(self.box_kamera_registrasi)
+        self.btnFotoRegistrasi.clicked.connect(self.line_foto_registrasi)       
 
         # Lokasi penyimpanan gambar wajah
-        self.lokasiWajah.clicked.connect(self.dialog_folder_wajah)
+        self.btnSimpanWajah.clicked.connect(self.dialog_folder_wajah)
 
         # Edit nama wajah
-        self.namaWajah.clicked.connect(self.nama_wajah)
+        self.btnNamaWajah.clicked.connect(self.nama_wajah)
+
+        # Tombol
+        self.btnStartRegistrasi.clicked.connect(self.tombol_start)
+        self.btnPauseRegistrasi.clicked.connect(self.tombol_pause)
+        
 
         self.crop.setMaximumHeight(self.crop.height())
         self.crop.setMaximumWidth(self.crop.width())
@@ -74,30 +99,37 @@ class MyGUI(QMainWindow):
         self.thread.detection_signal.connect(self.update_detection)
         self.thread.crop_signal.connect(self.update_crop)
         self.thread.alignment_signal.connect(self.update_align)
-        #self.thread.start()
 
     def dialog_deteksi_wajah(self):        
         file = QFileDialog.getOpenFileName(self, "Masukkan file model deteksi wajah", "", "ONNX File (*.onnx)")
         if file:
-            self.lineDeteksi.setText(str(file[0]))
+            self.lnDeteksi.setText(str(file[0]))
     
     def dialog_pengenalan_wajah(self):
         file = QFileDialog.getOpenFileName(self, "Masukkan file model pengenalan wajah", "", "ONNX File (*.onnx)")
         if file:
-            self.linePengenalan.setText(str(file[0]))
+            self.lnPengenalan.setText(str(file[0]))
     
     def tab_registrasi(self):
         self.pilihanTab.setEnabled(True)
+        self.lnDeteksi.setEnabled(True)        
+        self.btnModelDeteksi.setEnabled(True)
+        self.lnPengenalan.setEnabled(False)    
+        self.btnModelPengenalan.setEnabled(False)
         self.pilihanTab.setCurrentIndex(0)
     
     def tab_pengenalan(self):
         self.pilihanTab.setEnabled(True)
+        self.lnDeteksi.setEnabled(True)        
+        self.btnModelDeteksi.setEnabled(True)
+        self.lnPengenalan.setEnabled(True)        
+        self.btnModelPengenalan.setEnabled(True)
         self.pilihanTab.setCurrentIndex(1)
     
     def box_kamera_registrasi(self):
         self.boxKameraRegistrasi.setEnabled(True)
-        self.lineFotoRegistrasi.setEnabled(False)
-        self.fotoRegistrasi.setEnabled(False)
+        self.lnFotoRegistrasi.setEnabled(False)
+        self.btnLokasiFoto.setEnabled(False)
         self.boxKameraRegistrasi.clear()
 
         # Tambah list kamera ke combobox
@@ -107,21 +139,34 @@ class MyGUI(QMainWindow):
     
     def line_foto_registrasi(self):
         self.boxKameraRegistrasi.setEnabled(False)
-        self.lineFotoRegistrasi.setEnabled(True)
-        self.fotoRegistrasi.setEnabled(True)
+        self.lnFotoRegistrasi.setEnabled(True)
+        self.btnLokasiFoto.setEnabled(True)
 
     def dialog_folder_wajah(self):
         direktori = QFileDialog.getExistingDirectory(self, "Pilih folder penyimpanan wajah")
         if direktori:
-            self.lineLokasi.setText(str(direktori))
+            self.lnLokasi.setText(str(direktori))
     
     def nama_wajah(self):
-        if self.namaWajah.text() == "Terapkan":
-            self.namaWajah.setText("Ganti")            
-            self.lineNamaWajah.setEnabled(False)
+        if self.btnNamaWajah.text() == "Terapkan":
+            self.btnNamaWajah.setText("Ganti")            
+            self.lnNamaWajah.setEnabled(False)
         else:
-            self.namaWajah.setText("Terapkan")
-            self.lineNamaWajah.setEnabled(True)
+            self.btnNamaWajah.setText("Terapkan")
+            self.lnNamaWajah.setEnabled(True)
+    
+    def tombol_start(self):
+        global cameraIndex
+        cameraIndex = self.boxKameraRegistrasi.currentIndex()
+        self.btnStartRegistrasi.setEnabled(False)      
+        self.btnPauseRegistrasi.setEnabled(True)          
+        self.thread.start()
+        
+    
+    def tombol_pause(self):
+        self.btnStartRegistrasi.setEnabled(True)
+        self.btnPauseRegistrasi.setEnabled(False)
+        self.thread.stop()
 
     @pyqtSlot(np.ndarray)
     def update_detection(self, cv_img): 
@@ -149,7 +194,6 @@ class MyGUI(QMainWindow):
         h, w, _ = face_img.shape
         bytes_per_line = 3 * w
         qt_format = QtGui.QImage(face_img, w, h, bytes_per_line, QtGui.QImage.Format.Format_BGR888)
-        print(QtGui.QImage.Format.Format_BGR888)
         qt_img = QPixmap.fromImage(qt_format)
         self.align.adjustSize()
         self.align.setPixmap(qt_img)
