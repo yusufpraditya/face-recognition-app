@@ -1,5 +1,5 @@
 from shutil import ExecError
-from PyQt6.QtWidgets import QMainWindow, QApplication, QSizePolicy, QLabel, QFileDialog
+from PyQt6.QtWidgets import QMainWindow, QApplication, QSizePolicy, QLabel, QFileDialog, QMessageBox
 from PyQt6 import uic, QtGui
 from PyQt6.QtGui import QPixmap, QResizeEvent, QBitmap
 from PyQt6.QtCore import QThread, pyqtSignal, pyqtSlot, Qt
@@ -16,7 +16,8 @@ class VideoThread(QThread):
     detection_signal = pyqtSignal(np.ndarray)
     crop_signal = pyqtSignal(np.ndarray)
     alignment_signal = pyqtSignal(np.ndarray)
-    global cameraIndex
+
+    global cameraIndex, file_model_deteksi, file_model_pengenalan
 
     def run(self):        
         if cameraIndex == 0:
@@ -29,7 +30,7 @@ class VideoThread(QThread):
         while self.isActive:
             _, original_img = cap.read()
             
-            model = YuNet(model_path="face_detection_yunet.onnx")
+            model = YuNet(model_path=file_model_deteksi)
             
             detected_img, face_img, landmarks = model.detect(original_img)      
             try:       
@@ -46,7 +47,6 @@ class VideoThread(QThread):
     def stop(self):
         self.isActive = False
         self.quit()
-
             
 class MyGUI(QMainWindow):
     def __init__(self):
@@ -56,14 +56,10 @@ class MyGUI(QMainWindow):
         
         self.display_width = 100
         self.display_height = 100
-
+        
         self.pilihanTab.setEnabled(False)
         self.btnPauseRegistrasi.setEnabled(False)
         self.btnStopRegistrasi.setEnabled(False)
-        self.lnDeteksi.setEnabled(False)
-        self.lnPengenalan.setEnabled(False)
-        self.btnModelDeteksi.setEnabled(False)
-        self.btnModelPengenalan.setEnabled(False)
 
         # Pilih tab registrasi/pengenalan
         self.btnRegistrasi.clicked.connect(self.tab_registrasi)
@@ -100,30 +96,28 @@ class MyGUI(QMainWindow):
         self.thread.crop_signal.connect(self.update_crop)
         self.thread.alignment_signal.connect(self.update_align)
 
-    def dialog_deteksi_wajah(self):        
+    def dialog_deteksi_wajah(self):
+        global file_model_deteksi
         file = QFileDialog.getOpenFileName(self, "Masukkan file model deteksi wajah", "", "ONNX File (*.onnx)")
         if file:
-            self.lnDeteksi.setText(str(file[0]))
+            file_model_deteksi = str(file[0])
+            self.lnDeteksi.setText(file_model_deteksi)
+            print(file_model_deteksi)
     
     def dialog_pengenalan_wajah(self):
+        global file_model_pengenalan
         file = QFileDialog.getOpenFileName(self, "Masukkan file model pengenalan wajah", "", "ONNX File (*.onnx)")
         if file:
-            self.lnPengenalan.setText(str(file[0]))
+            file_model_pengenalan = str(file[0])
+            self.lnPengenalan.setText(file_model_pengenalan)
+            print(file_model_pengenalan)
     
     def tab_registrasi(self):
         self.pilihanTab.setEnabled(True)
-        self.lnDeteksi.setEnabled(True)        
-        self.btnModelDeteksi.setEnabled(True)
-        self.lnPengenalan.setEnabled(False)    
-        self.btnModelPengenalan.setEnabled(False)
         self.pilihanTab.setCurrentIndex(0)
     
     def tab_pengenalan(self):
         self.pilihanTab.setEnabled(True)
-        self.lnDeteksi.setEnabled(True)        
-        self.btnModelDeteksi.setEnabled(True)
-        self.lnPengenalan.setEnabled(True)        
-        self.btnModelPengenalan.setEnabled(True)
         self.pilihanTab.setCurrentIndex(1)
     
     def box_kamera_registrasi(self):
@@ -157,10 +151,13 @@ class MyGUI(QMainWindow):
     
     def tombol_start(self):
         global cameraIndex
-        cameraIndex = self.boxKameraRegistrasi.currentIndex()
-        self.btnStartRegistrasi.setEnabled(False)      
-        self.btnPauseRegistrasi.setEnabled(True)          
-        self.thread.start()
+        if self.lnDeteksi.text() == "" or self.lnPengenalan.text() == "":
+            QMessageBox.information(None, "Error", "Mohon masukkan file model deteksi & pengenalan pada bagian Setting.")
+        else:
+            cameraIndex = self.boxKameraRegistrasi.currentIndex()
+            self.btnStartRegistrasi.setEnabled(False)      
+            self.btnPauseRegistrasi.setEnabled(True)          
+            self.thread.start()
         
     
     def tombol_pause(self):
@@ -198,7 +195,7 @@ class MyGUI(QMainWindow):
         self.align.adjustSize()
         self.align.setPixmap(qt_img)
         #self.align.setScaledContents(True)
-
+    
 def main():
     app = QApplication([])
     window = MyGUI()
