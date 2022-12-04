@@ -11,6 +11,7 @@ import numpy as np
 import sys
 import os
 from yunet import YuNet
+import datetime
 
 class VideoThread(QThread):
     #change_pixmap_signal = pyqtSignal(np.ndarray, np.ndarray)
@@ -74,8 +75,9 @@ class MyGUI(QMainWindow):
         self.btnModelPengenalan.clicked.connect(self.dialog_pengenalan_wajah)        
 
         # Pilih input
-        self.btnKameraRegistrasi.clicked.connect(self.box_kamera_registrasi)
-        self.btnFotoRegistrasi.clicked.connect(self.line_foto_registrasi)       
+        self.btnKameraRegistrasi.clicked.connect(self.kamera_registrasi)
+        self.btnFotoRegistrasi.clicked.connect(self.foto_registrasi)
+        self.btnLokasiFoto.clicked.connect(self.lokasi_foto)    
 
         # Lokasi penyimpanan gambar wajah
         self.btnSimpanWajah.clicked.connect(self.dialog_folder_wajah)
@@ -118,26 +120,47 @@ class MyGUI(QMainWindow):
     def tab_registrasi(self):
         self.pilihanTab.setEnabled(True)
         self.pilihanTab.setCurrentIndex(0)
+
+        self.btnSimilarity.setEnabled(False)
+        self.valSimilarity.setEnabled(False)
     
     def tab_pengenalan(self):
         self.pilihanTab.setEnabled(True)
         self.pilihanTab.setCurrentIndex(1)
+
+        self.btnSimilarity.setEnabled(True)
+        self.valSimilarity.setEnabled(True)
     
-    def box_kamera_registrasi(self):
+    def kamera_registrasi(self):
         self.boxKameraRegistrasi.setEnabled(True)
         self.lnFotoRegistrasi.setEnabled(False)
         self.btnLokasiFoto.setEnabled(False)
         self.boxKameraRegistrasi.clear()
+        self.lnFotoRegistrasi.clear()
+
+        self.btnStartRegistrasi.setEnabled(True)
 
         # Tambah list kamera ke combobox
         cameraList = QMediaDevices.videoInputs()        
         for c in cameraList:
             self.boxKameraRegistrasi.addItem(c.description())
     
-    def line_foto_registrasi(self):
+    def foto_registrasi(self):
         self.boxKameraRegistrasi.setEnabled(False)
         self.lnFotoRegistrasi.setEnabled(True)
         self.btnLokasiFoto.setEnabled(True)
+        self.boxKameraRegistrasi.clear()
+
+        self.btnStartRegistrasi.setEnabled(False)
+        self.btnPauseRegistrasi.setEnabled(False)
+        self.btnStopRegistrasi.setEnabled(False)
+
+    def lokasi_foto(self):
+        img_file = QFileDialog.getOpenFileName(self, "Masukkan gambar subjek yang akan diregistrasi", "", "Image Files (*.jpg *.jpeg *.png *.bmp)")
+        if img_file:
+            gambar_subjek = str(img_file[0])
+            self.lnFotoRegistrasi.setText(gambar_subjek)
+            print(gambar_subjek)
 
     def dialog_folder_wajah(self):
         direktori = QFileDialog.getExistingDirectory(self, "Pilih folder penyimpanan wajah")
@@ -146,8 +169,16 @@ class MyGUI(QMainWindow):
     
     def nama_wajah(self):
         if self.btnNamaWajah.text() == "Terapkan":
-            self.btnNamaWajah.setText("Ganti")            
-            self.lnNamaWajah.setEnabled(False)
+            if self.lnNamaWajah.text() == "":
+                QMessageBox.information(None, "Error", "Nama wajah tidak boleh kosong!")
+            else:
+                if self.lnLokasi.text() == "":
+                    QMessageBox.information(None, "Error", "Pilih folder penyimpanan wajah terlebih dahulu!")
+                else:
+                    folder_name = self.lnLokasi.text() + "/" + self.lnNamaWajah.text()
+                    os.makedirs(folder_name, exist_ok=True)
+                    self.btnNamaWajah.setText("Ganti")            
+                    self.lnNamaWajah.setEnabled(False)
         else:
             self.btnNamaWajah.setText("Terapkan")
             self.lnNamaWajah.setEnabled(True)
@@ -174,8 +205,12 @@ class MyGUI(QMainWindow):
         
         if self.lnLokasi.text() == "":
             QMessageBox.information(None, "Error", "Mohon masukkan folder penyimpanan database.")
+        elif self.lnNamaWajah.text() == "":
+            QMessageBox.information(None, "Error", "Mohon isi nama wajah yang akan diregistrasi.")
         else:
-            cv2.imwrite(self.lnLokasi.text() + "/test.jpg", aligned_img)
+            now = datetime.datetime.now()
+            time_now = now.strftime("_%H%M%S.jpg")
+            cv2.imwrite(self.lnLokasi.text() + "/" + self.lnNamaWajah.text() + "/" + self.lnNamaWajah.text() + time_now, aligned_img)
 
     @pyqtSlot(np.ndarray)
     def update_detection(self, cv_img): 
