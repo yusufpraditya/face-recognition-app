@@ -67,7 +67,7 @@ if __name__ == '__main__':
         cap = cv.VideoCapture(int(args.input))
     else:
         cap = cv.VideoCapture(args.input)
-    scale_percent = 30 # percent of original size
+    scale_percent = 100 # percent of original size
     frame_w = int(int(cap.get(cv.CAP_PROP_FRAME_WIDTH)) * scale_percent / 100)
     frame_h = int(int(cap.get(cv.CAP_PROP_FRAME_HEIGHT)) * scale_percent / 100)
     dim = (frame_w, frame_h)

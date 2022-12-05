@@ -4,7 +4,7 @@ import math
 from PIL import Image
 
 class YuNet:
-    def __init__(self, model_path, input_size=[640, 480], score_threshold=0.7, nms_threshold=0.3, top_k=5000):
+    def __init__(self, model_path, input_size=[320, 320], score_threshold=0.7, nms_threshold=0.3, top_k=5000):
         self.tm = cv2.TickMeter()
         self.model_path = model_path
         self.input_size = input_size
@@ -31,6 +31,9 @@ class YuNet:
             nms_threshold=self.nms_threshold,
             top_k=self.top_k
         )
+    
+    def set_input_size(self, input_size):
+        self.model.setInputSize(tuple(input_size))
     
     def detect(self, image):
         cropped_face = image.copy()

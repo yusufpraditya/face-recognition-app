@@ -15,6 +15,7 @@ import datetime
 
 class VideoThread(QThread):
     #change_pixmap_signal = pyqtSignal(np.ndarray, np.ndarray)
+
     detection_signal = pyqtSignal(np.ndarray)
     crop_signal = pyqtSignal(np.ndarray)
     alignment_signal = pyqtSignal(np.ndarray)
@@ -34,6 +35,9 @@ class VideoThread(QThread):
             _, original_img = cap.read()
             
             model = YuNet(model_path=file_model_deteksi)
+            w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+            h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            model.set_input_size([w, h])
             
             detected_img, face_img, landmarks = model.detect(original_img)      
             try:       
@@ -160,8 +164,9 @@ class MyGUI(QMainWindow):
         if img_file:
             gambar_subjek = str(img_file[0])
             self.lnFotoRegistrasi.setText(gambar_subjek)
+            self.process_image(gambar_subjek)
             print(gambar_subjek)
-
+    
     def dialog_folder_wajah(self):
         direktori = QFileDialog.getExistingDirectory(self, "Pilih folder penyimpanan wajah")
         if direktori:
@@ -211,6 +216,27 @@ class MyGUI(QMainWindow):
             now = datetime.datetime.now()
             time_now = now.strftime("_%H%M%S.jpg")
             cv2.imwrite(self.lnLokasi.text() + "/" + self.lnNamaWajah.text() + "/" + self.lnNamaWajah.text() + time_now, aligned_img)
+
+    def process_image(self, path_gambar):        
+        global file_model_deteksi
+        
+        original_img = cv2.imread(path_gambar)
+
+        model = YuNet(model_path=file_model_deteksi)
+        h, w, _ = original_img.shape
+        model.set_input_size([w, h])
+            
+        detected_img, face_img, landmarks = model.detect(original_img)      
+        try:       
+            aligned_img = model.align_face(face_img, landmarks)
+        except Exception as e:
+            print(e)
+        if detected_img is not None and landmarks is not None and aligned_img is not None:    
+            self.update_detection(detected_img)        
+            self.update_crop(face_img)
+            self.update_align(aligned_img)
+        else:
+            self.update_detection(original_img)            
 
     @pyqtSlot(np.ndarray)
     def update_detection(self, cv_img): 
