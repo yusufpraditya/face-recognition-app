@@ -92,13 +92,7 @@ class MyGUI(QMainWindow):
         # Tombol
         self.btnStartRegistrasi.clicked.connect(self.tombol_start)
         self.btnPauseRegistrasi.clicked.connect(self.tombol_pause)
-        self.btnRegister.clicked.connect(self.tombol_register)
-        
-
-        self.crop.setMaximumHeight(self.crop.height())
-        self.crop.setMaximumWidth(self.crop.width())
-        self.align.setMaximumHeight(self.align.height())
-        self.align.setMaximumWidth(self.align.width())
+        self.btnRegister.clicked.connect(self.tombol_register)      
 
         self.thread = VideoThread()
         self.thread.detection_signal.connect(self.update_detection)
@@ -241,10 +235,21 @@ class MyGUI(QMainWindow):
     @pyqtSlot(np.ndarray)
     def update_detection(self, cv_img): 
         h, w, _ = cv_img.shape
+
+        # Resize
+        if h > self.detection.height() or w > self.detection.width():
+           h_ratio = self.detection.height() / h
+           w_ratio = self.detection.width() / w
+           scale_factor = min(h_ratio, w_ratio)
+           h = int(h * scale_factor)
+           w = int(w * scale_factor)
+           dim = (w, h)
+           cv_img = cv2.resize(cv_img, dim)
+
         bytes_per_line = 3 * w
         qt_format = QtGui.QImage(cv_img, w, h, bytes_per_line, QtGui.QImage.Format.Format_BGR888)        
         qt_img = QPixmap.fromImage(qt_format)        
-        self.detection.adjustSize()                    
+        self.detection.adjustSize()
         self.detection.setPixmap(qt_img)
         #self.detection.setScaledContents(True)
 
