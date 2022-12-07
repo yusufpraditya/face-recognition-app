@@ -6,7 +6,7 @@ from PyQt6.QtCore import QThread, pyqtSignal, pyqtSlot, Qt
 from PyQt6.QtMultimedia import *
 from PyQt6.QtMultimediaWidgets import *
 import cv2
-from more_itertools import peekable
+#from more_itertools import peekable
 import numpy as np
 import sys
 import os
@@ -14,8 +14,6 @@ from yunet import YuNet
 import datetime
 
 class VideoThread(QThread):
-    #change_pixmap_signal = pyqtSignal(np.ndarray, np.ndarray)
-
     detection_signal = pyqtSignal(np.ndarray)
     crop_signal = pyqtSignal(np.ndarray)
     alignment_signal = pyqtSignal(np.ndarray)
@@ -38,18 +36,18 @@ class VideoThread(QThread):
             w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
             h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
             model.set_input_size([w, h])
-            
-            detected_img, face_img, landmarks = model.detect(original_img)      
+           
             try:       
+                detected_img, face_img, landmarks = model.detect(original_img) 
                 aligned_img = model.align_face(face_img, landmarks)
+                if detected_img is not None and face_img is not None and landmarks is not None and aligned_img is not None:              
+                    self.detection_signal.emit(detected_img)
+                    self.crop_signal.emit(face_img)
+                    self.alignment_signal.emit(aligned_img)
+                else:
+                    self.detection_signal.emit(original_img)
             except Exception as e:
-                print(e)
-            if detected_img is not None and landmarks is not None and aligned_img is not None:                
-                self.detection_signal.emit(detected_img)
-                self.crop_signal.emit(face_img)
-                self.alignment_signal.emit(aligned_img)
-            else:
-                self.detection_signal.emit(original_img)
+                print(e)            
 
     def stop(self):
         self.isActive = False
@@ -59,10 +57,13 @@ class MyGUI(QMainWindow):
     def __init__(self):
         super(MyGUI, self).__init__()
         uic.loadUi("desain_v3.ui", self)       
-        self.show()
+        self.showFullScreen()
         
         self.display_width = 100
         self.display_height = 100
+
+        self.crop.setMaximumSize(self.crop.width(), self.crop.height())
+        self.align.setMaximumSize(self.align.width(), self.align.height())
         
         self.pilihanTab.setEnabled(False)
         self.btnPauseRegistrasi.setEnabled(False)
@@ -93,6 +94,7 @@ class MyGUI(QMainWindow):
         self.btnStartRegistrasi.clicked.connect(self.tombol_start)
         self.btnPauseRegistrasi.clicked.connect(self.tombol_pause)
         self.btnRegister.clicked.connect(self.tombol_register)      
+        self.btnExit.clicked.connect(self.tombol_exit)
 
         self.thread = VideoThread()
         self.thread.detection_signal.connect(self.update_detection)
@@ -159,7 +161,6 @@ class MyGUI(QMainWindow):
             gambar_subjek = str(img_file[0])
             self.lnFotoRegistrasi.setText(gambar_subjek)
             self.process_image(gambar_subjek)
-            print(gambar_subjek)
     
     def dialog_folder_wajah(self):
         direktori = QFileDialog.getExistingDirectory(self, "Pilih folder penyimpanan wajah")
@@ -211,6 +212,9 @@ class MyGUI(QMainWindow):
             time_now = now.strftime("_%H%M%S.jpg")
             cv2.imwrite(self.lnLokasi.text() + "/" + self.lnNamaWajah.text() + "/" + self.lnNamaWajah.text() + time_now, aligned_img)
 
+    def tombol_exit(self):
+        sys.exit()
+    
     def process_image(self, path_gambar):        
         global file_model_deteksi
         
@@ -218,19 +222,19 @@ class MyGUI(QMainWindow):
 
         model = YuNet(model_path=file_model_deteksi)
         h, w, _ = original_img.shape
-        model.set_input_size([w, h])
-            
-        detected_img, face_img, landmarks = model.detect(original_img)      
-        try:       
+        model.set_input_size([w, h])            
+             
+        try:     
+            detected_img, face_img, landmarks = model.detect(original_img)   
             aligned_img = model.align_face(face_img, landmarks)
+            if detected_img is not None and face_img is not None and landmarks is not None and aligned_img is not None:    
+                self.update_detection(detected_img)        
+                self.update_crop(face_img)
+                self.update_align(aligned_img)
+            else:
+                self.update_detection(original_img)  
         except Exception as e:
-            print(e)
-        if detected_img is not None and landmarks is not None and aligned_img is not None:    
-            self.update_detection(detected_img)        
-            self.update_crop(face_img)
-            self.update_align(aligned_img)
-        else:
-            self.update_detection(original_img)            
+            print(e)                  
 
     @pyqtSlot(np.ndarray)
     def update_detection(self, cv_img): 
@@ -249,7 +253,7 @@ class MyGUI(QMainWindow):
         bytes_per_line = 3 * w
         qt_format = QtGui.QImage(cv_img, w, h, bytes_per_line, QtGui.QImage.Format.Format_BGR888)        
         qt_img = QPixmap.fromImage(qt_format)        
-        self.detection.adjustSize()
+        #self.detection.adjustSize()
         self.detection.setPixmap(qt_img)
         #self.detection.setScaledContents(True)
 
@@ -257,20 +261,42 @@ class MyGUI(QMainWindow):
     def update_crop(self, face_img):
         face_img = face_img.copy()
         h, w, _ = face_img.shape
+
+        # Resize
+        if h > self.crop.height() or w > self.crop.width():
+           h_ratio = self.crop.height() / h
+           w_ratio = self.crop.width() / w
+           scale_factor = min(h_ratio, w_ratio)
+           h = int(h * scale_factor)
+           w = int(w * scale_factor)
+           dim = (w, h)
+           face_img = cv2.resize(face_img, dim)
+
         bytes_per_line = 3 * w
         qt_format = QtGui.QImage(face_img, w, h, bytes_per_line, QtGui.QImage.Format.Format_BGR888)        
         qt_img = QPixmap.fromImage(qt_format)
-        self.crop.adjustSize()
+        #self.crop.adjustSize()
         self.crop.setPixmap(qt_img)
         #self.crop.setScaledContents(True)
 
     @pyqtSlot(np.ndarray)
     def update_align(self, face_img):
         h, w, _ = face_img.shape
+
+        # Resize
+        if h > self.align.height() or w > self.align.width():
+           h_ratio = self.align.height() / h
+           w_ratio = self.align.width() / w
+           scale_factor = min(h_ratio, w_ratio)
+           h = int(h * scale_factor)
+           w = int(w * scale_factor)
+           dim = (w, h)
+           face_img = cv2.resize(face_img, dim)
+
         bytes_per_line = 3 * w
         qt_format = QtGui.QImage(face_img, w, h, bytes_per_line, QtGui.QImage.Format.Format_BGR888)
         qt_img = QPixmap.fromImage(qt_format)
-        self.align.adjustSize()
+        #self.align.adjustSize()
         self.align.setPixmap(qt_img)
         #self.align.setScaledContents(True)
     
@@ -281,3 +307,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+

@@ -44,7 +44,7 @@ class YuNet:
                 cv2.rectangle(image, (bbox[0], bbox[1]), (bbox[0]+bbox[2], bbox[1]+bbox[3]), (0, 255, 0), 2)
                 cropped_face = cropped_face[bbox[1]:bbox[1] + bbox[3], bbox[0]:bbox[0] + bbox[2]]
                 landmarks = det[4:14].astype(np.int32).reshape((5,2))
-                return image, cropped_face, landmarks        
+                return image, cropped_face, landmarks
         else:
             return None, None, None
         
