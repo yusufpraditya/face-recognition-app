@@ -30,3 +30,8 @@ var_c = var_a.get_list()[1]
 var_d = var_a.get_list()[2]
 #del var_d.test_list[0]
 print(var_a._test_val)
+
+
+some_list = [1,2,3,4]
+for i in range(len(some_list) + 1):
+    print(some_list[i])

@@ -50,7 +50,7 @@ class YuNet:
         
 
     def align_face(self, image, landmarks):
-        if landmarks is not None:
+        if landmarks is not None and len(image) != 0:
             left_eye = landmarks[0]
             right_eye = landmarks[1]
             

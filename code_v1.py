@@ -40,7 +40,8 @@ class VideoThread(QThread):
             try:       
                 detected_img, face_img, landmarks = model.detect(original_img) 
                 aligned_img = model.align_face(face_img, landmarks)
-                if detected_img is not None and face_img is not None and landmarks is not None and aligned_img is not None:              
+                if detected_img is not None and face_img is not None and landmarks is not None and aligned_img is not None:
+                    
                     self.detection_signal.emit(detected_img)
                     self.crop_signal.emit(face_img)
                     self.alignment_signal.emit(aligned_img)
@@ -163,7 +164,7 @@ class MyGUI(QMainWindow):
             self.process_image(gambar_subjek)
     
     def dialog_folder_wajah(self):
-        direktori = QFileDialog.getExistingDirectory(self, "Pilih folder penyimpanan wajah")
+        direktori = QFileDialog.getExistingDirectory(self, "Pilih folder database")
         if direktori:
             self.lnLokasi.setText(str(direktori))
     
@@ -212,6 +213,7 @@ class MyGUI(QMainWindow):
             time_now = now.strftime("_%H%M%S.jpg")
             cv2.imwrite(self.lnLokasi.text() + "/" + self.lnNamaWajah.text() + "/" + self.lnNamaWajah.text() + time_now, aligned_img)
 
+
     def tombol_exit(self):
         sys.exit()
     
@@ -227,7 +229,7 @@ class MyGUI(QMainWindow):
         try:     
             detected_img, face_img, landmarks = model.detect(original_img)   
             aligned_img = model.align_face(face_img, landmarks)
-            if detected_img is not None and face_img is not None and landmarks is not None and aligned_img is not None:    
+            if detected_img is not None and face_img is not None and landmarks is not None:    
                 self.update_detection(detected_img)        
                 self.update_crop(face_img)
                 self.update_align(aligned_img)
