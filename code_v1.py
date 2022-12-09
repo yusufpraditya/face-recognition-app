@@ -6,10 +6,10 @@ from PyQt6.QtCore import QThread, pyqtSignal, pyqtSlot, Qt
 from PyQt6.QtMultimedia import *
 from PyQt6.QtMultimediaWidgets import *
 import cv2
-#from more_itertools import peekable
 import numpy as np
 import sys
 import os
+import pickle
 from yunet import YuNet
 import datetime
 
@@ -86,7 +86,7 @@ class MyGUI(QMainWindow):
         self.btnLokasiFoto.clicked.connect(self.lokasi_foto)    
 
         # Lokasi penyimpanan gambar wajah
-        self.btnSimpanWajah.clicked.connect(self.dialog_folder_wajah)
+        self.btnSimpanWajah.clicked.connect(self.dialog_folder_database)
 
         # Edit nama wajah
         self.btnNamaWajah.clicked.connect(self.nama_wajah)
@@ -163,10 +163,15 @@ class MyGUI(QMainWindow):
             self.lnFotoRegistrasi.setText(gambar_subjek)
             self.process_image(gambar_subjek)
     
-    def dialog_folder_wajah(self):
+    def dialog_folder_database(self):
         direktori = QFileDialog.getExistingDirectory(self, "Pilih folder database")
         if direktori:
-            self.lnLokasi.setText(str(direktori))
+            if str(direktori).split("/")[-1] == "database": 
+                self.lnLokasi.setText(str(direktori))
+            else:
+                folder_name = str(direktori) + "/database"
+                os.makedirs(folder_name, exist_ok=True)
+                self.lnLokasi.setText(folder_name)
     
     def nama_wajah(self):
         if self.btnNamaWajah.text() == "Terapkan":
@@ -202,17 +207,32 @@ class MyGUI(QMainWindow):
         self.thread.stop()
     
     def tombol_register(self):
-        global aligned_img
+        global aligned_img, file_model_pengenalan
         
         if self.lnLokasi.text() == "":
             QMessageBox.information(None, "Error", "Mohon masukkan folder penyimpanan database.")
         elif self.lnNamaWajah.text() == "":
             QMessageBox.information(None, "Error", "Mohon isi nama wajah yang akan diregistrasi.")
-        else:
-            now = datetime.datetime.now()
-            time_now = now.strftime("_%H%M%S.jpg")
-            cv2.imwrite(self.lnLokasi.text() + "/" + self.lnNamaWajah.text() + "/" + self.lnNamaWajah.text() + time_now, aligned_img)
-
+        else: 
+            self.btnRegister.setEnabled(False)
+            # Simpan gambar wajah ke folder database  
+            #now = datetime.datetime.now()
+            #time_now = now.strftime("_%H%M%S.jpg")
+            #cv2.imwrite(self.lnLokasi.text() + "/" + self.lnNamaWajah.text() + "/" + self.lnNamaWajah.text() + time_now, aligned_img)
+            
+            # Simpan hasil ekstrasi fitur ke folder database dalam bentuk format pickle
+            database = {}
+            folder_database = self.lnLokasi.text()
+            for wajah in os.listdir(folder_database):
+                folder_wajah = folder_database + "/" + wajah             
+                for gambar_wajah in os.listdir(folder_wajah):
+                        path_wajah = folder_wajah + "/" + gambar_wajah
+                        gambar_wajah_opencv = cv2.imread(path_wajah)
+                        model_pengenalan = cv2.FaceRecognizerSF.create(file_model_pengenalan, "")                        
+                        fitur_wajah = model_pengenalan.feature(gambar_wajah_opencv)
+                        database[os.path.splitext(gambar_wajah)[0]] = fitur_wajah
+            print(database)
+            #self.btnRegister.setEnabled(True)
 
     def tombol_exit(self):
         sys.exit()
