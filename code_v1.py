@@ -213,26 +213,29 @@ class MyGUI(QMainWindow):
             QMessageBox.information(None, "Error", "Mohon masukkan folder penyimpanan database.")
         elif self.lnNamaWajah.text() == "":
             QMessageBox.information(None, "Error", "Mohon isi nama wajah yang akan diregistrasi.")
-        else: 
-            self.btnRegister.setEnabled(False)
+        else:             
             # Simpan gambar wajah ke folder database  
-            #now = datetime.datetime.now()
-            #time_now = now.strftime("_%H%M%S.jpg")
-            #cv2.imwrite(self.lnLokasi.text() + "/" + self.lnNamaWajah.text() + "/" + self.lnNamaWajah.text() + time_now, aligned_img)
+            now = datetime.datetime.now()
+            time_now = now.strftime("_%H%M%S.jpg")
+            cv2.imwrite(self.lnLokasi.text() + "/" + self.lnNamaWajah.text() + "/" + self.lnNamaWajah.text() + time_now, aligned_img)
             
             # Simpan hasil ekstrasi fitur ke folder database dalam bentuk format pickle
             database = {}
             folder_database = self.lnLokasi.text()
             for wajah in os.listdir(folder_database):
-                folder_wajah = folder_database + "/" + wajah             
-                for gambar_wajah in os.listdir(folder_wajah):
-                        path_wajah = folder_wajah + "/" + gambar_wajah
-                        gambar_wajah_opencv = cv2.imread(path_wajah)
-                        model_pengenalan = cv2.FaceRecognizerSF.create(file_model_pengenalan, "")                        
-                        fitur_wajah = model_pengenalan.feature(gambar_wajah_opencv)
-                        database[os.path.splitext(gambar_wajah)[0]] = fitur_wajah
-            print(database)
-            #self.btnRegister.setEnabled(True)
+                folder_wajah = os.path.join(folder_database, wajah)           
+                if os.path.isdir(folder_wajah):                          
+                    for gambar_wajah in os.listdir(folder_wajah): 
+                            path_wajah = os.path.join(folder_wajah, gambar_wajah)  
+                            gambar_wajah_opencv = cv2.imread(path_wajah)
+                            model_pengenalan = cv2.FaceRecognizerSF.create(file_model_pengenalan, "")                        
+                            fitur_wajah = model_pengenalan.feature(gambar_wajah_opencv)
+                            database[os.path.splitext(gambar_wajah)[0]] = fitur_wajah            
+            file_pickle = "database.pkl"
+            lokasi_pickle = os.path.join(folder_database, file_pickle)
+            pickle_database = open(lokasi_pickle, "wb")
+            pickle.dump(database, pickle_database)
+            pickle_database.close()
 
     def tombol_exit(self):
         sys.exit()
