@@ -500,7 +500,7 @@ qproperty-alignment: AlignCenter;</string>
           </size>
          </property>
          <property name="currentIndex">
-          <number>0</number>
+          <number>1</number>
          </property>
          <widget class="QWidget" name="page">
           <layout class="QHBoxLayout" name="horizontalLayout_8">
@@ -660,7 +660,7 @@ qproperty-alignment: AlignCenter;</string>
                  </widget>
                 </item>
                 <item row="2" column="1">
-                 <widget class="QLineEdit" name="lnLokasi">
+                 <widget class="QLineEdit" name="lnLokasiSimpanDB">
                   <property name="dragEnabled">
                    <bool>false</bool>
                   </property>
@@ -743,20 +743,27 @@ qproperty-alignment: AlignCenter;</string>
                  </widget>
                 </item>
                 <item row="1" column="1">
-                 <widget class="QLineEdit" name="lineEdit_6"/>
+                 <widget class="QLineEdit" name="lnVideoFotoPengenalan">
+                  <property name="enabled">
+                   <bool>false</bool>
+                  </property>
+                 </widget>
                 </item>
                 <item row="1" column="2">
-                 <widget class="QPushButton" name="pushButton_14">
+                 <widget class="QPushButton" name="btnLokasiVideoFoto">
+                  <property name="enabled">
+                   <bool>false</bool>
+                  </property>
                   <property name="text">
                    <string>Pilih</string>
                   </property>
                  </widget>
                 </item>
                 <item row="2" column="1">
-                 <widget class="QLineEdit" name="lineEdit_7"/>
+                 <widget class="QLineEdit" name="lnLokasiDB"/>
                 </item>
                 <item row="2" column="2">
-                 <widget class="QPushButton" name="pushButton_15">
+                 <widget class="QPushButton" name="btnLokasiDB">
                   <property name="text">
                    <string>Pilih</string>
                   </property>
@@ -770,7 +777,11 @@ qproperty-alignment: AlignCenter;</string>
                  </widget>
                 </item>
                 <item row="0" column="1">
-                 <widget class="QComboBox" name="comboBox_2"/>
+                 <widget class="QComboBox" name="boxKameraPengenalan">
+                  <property name="enabled">
+                   <bool>false</bool>
+                  </property>
+                 </widget>
                 </item>
                </layout>
               </item>
@@ -780,21 +791,21 @@ qproperty-alignment: AlignCenter;</string>
                  <number>0</number>
                 </property>
                 <item>
-                 <widget class="QPushButton" name="pushButton_16">
+                 <widget class="QPushButton" name="btnStartPengenalan">
                   <property name="text">
                    <string>Start</string>
                   </property>
                  </widget>
                 </item>
                 <item>
-                 <widget class="QPushButton" name="pushButton_17">
+                 <widget class="QPushButton" name="btnPausePengenalan">
                   <property name="text">
                    <string>Pause</string>
                   </property>
                  </widget>
                 </item>
                 <item>
-                 <widget class="QPushButton" name="pushButton_18">
+                 <widget class="QPushButton" name="btnStopPengenalan">
                   <property name="text">
                    <string>Stop</string>
                   </property>
@@ -805,14 +816,14 @@ qproperty-alignment: AlignCenter;</string>
               <item row="0" column="0">
                <layout class="QHBoxLayout" name="horizontalLayout_12" stretch="1,2">
                 <item>
-                 <widget class="QRadioButton" name="radioButton_5">
+                 <widget class="QRadioButton" name="btnKameraPengenalan">
                   <property name="text">
                    <string>Kamera</string>
                   </property>
                  </widget>
                 </item>
                 <item>
-                 <widget class="QRadioButton" name="radioButton_6">
+                 <widget class="QRadioButton" name="btnVideoFotoPengenalan">
                   <property name="text">
                    <string>Video/foto</string>
                   </property>

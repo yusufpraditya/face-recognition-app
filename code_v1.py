@@ -19,15 +19,14 @@ class VideoThread(QThread):
     alignment_signal = pyqtSignal(np.ndarray)
 
     global cameraIndex, file_model_deteksi, file_model_pengenalan
+    isActive = True
 
     def run(self):     
         global aligned_img   
         if cameraIndex == 0:
             cap = cv2.VideoCapture(cameraIndex)
         if cameraIndex == 1:
-            cap = cv2.VideoCapture(cameraIndex,cv2.CAP_DSHOW)
-
-        self.isActive = True
+            cap = cv2.VideoCapture(cameraIndex,cv2.CAP_DSHOW)        
 
         while self.isActive:
             _, original_img = cap.read()
@@ -66,9 +65,12 @@ class MyGUI(QMainWindow):
         self.crop.setMaximumSize(self.crop.width(), self.crop.height())
         self.align.setMaximumSize(self.align.width(), self.align.height())
         
+        self.pilihanTab.setCurrentIndex(0)
+
         self.pilihanTab.setEnabled(False)
         self.btnPauseRegistrasi.setEnabled(False)
-        self.btnStopRegistrasi.setEnabled(False)
+        self.btnRegister.setEnabled(False)
+        self.btnStopRegistrasi.setEnabled(False)        
 
         # Pilih tab registrasi/pengenalan
         self.btnRegistrasi.clicked.connect(self.tab_registrasi)
@@ -80,27 +82,46 @@ class MyGUI(QMainWindow):
         # Dialog file model pengenalan wajah
         self.btnModelPengenalan.clicked.connect(self.dialog_pengenalan_wajah)        
 
-        # Pilih input
+        # Pilih input (tab registrasi)
         self.btnKameraRegistrasi.clicked.connect(self.kamera_registrasi)
         self.btnFotoRegistrasi.clicked.connect(self.foto_registrasi)
         self.btnLokasiFoto.clicked.connect(self.lokasi_foto)    
 
         # Lokasi penyimpanan gambar wajah
-        self.btnSimpanWajah.clicked.connect(self.dialog_folder_database)
+        self.btnSimpanWajah.clicked.connect(self.dialog_simpan_database)
 
         # Edit nama wajah
         self.btnNamaWajah.clicked.connect(self.nama_wajah)
 
-        # Tombol
+        # Pilih input (tab pengenalan)
+        self.btnKameraPengenalan.clicked.connect(self.kamera_pengenalan)
+        self.btnVideoFotoPengenalan.clicked.connect(self.video_foto_pengenalan)
+        self.btnLokasiVideoFoto.clicked.connect(self.lokasi_video_foto_pengenalan)
+
+        # Lokasi database
+        self.btnLokasiDB.clicked.connect(self.dialog_lokasi_database)
+
+        # Tombol-tombol Tab Registrasi
         self.btnStartRegistrasi.clicked.connect(self.tombol_start)
         self.btnPauseRegistrasi.clicked.connect(self.tombol_pause)
-        self.btnRegister.clicked.connect(self.tombol_register)      
+        self.btnStopRegistrasi.clicked.connect(self.tombol_stop)
+        self.btnRegister.clicked.connect(self.tombol_register)    
+
+        # Tombol-tombol Tab Pengenalan
+        self.btnStartPengenalan.clicked.connect(self.tombol_start_pengenalan)
+        self.btnPausePengenalan.clicked.connect(self.tombol_pause_pengenalan)
+        self.btnStopPengenalan.clicked.connect(self.tombol_stop_pengenalan)
+
+        # Tombol keluar
         self.btnExit.clicked.connect(self.tombol_exit)
+        
 
         self.thread = VideoThread()
         self.thread.detection_signal.connect(self.update_detection)
         self.thread.crop_signal.connect(self.update_crop)
         self.thread.alignment_signal.connect(self.update_align)
+        print(self.thread.isActive)
+        
 
     def dialog_deteksi_wajah(self):
         global file_model_deteksi
@@ -163,25 +184,25 @@ class MyGUI(QMainWindow):
             self.lnFotoRegistrasi.setText(gambar_subjek)
             self.process_image(gambar_subjek)
     
-    def dialog_folder_database(self):
+    def dialog_simpan_database(self):
         direktori = QFileDialog.getExistingDirectory(self, "Pilih folder database")
         if direktori:
             if str(direktori).split("/")[-1] == "database": 
-                self.lnLokasi.setText(str(direktori))
+                self.lnLokasiSimpanDB.setText(str(direktori))
             else:
                 folder_name = str(direktori) + "/database"
                 os.makedirs(folder_name, exist_ok=True)
-                self.lnLokasi.setText(folder_name)
+                self.lnLokasiSimpanDB.setText(folder_name)
     
     def nama_wajah(self):
         if self.btnNamaWajah.text() == "Terapkan":
             if self.lnNamaWajah.text() == "":
                 QMessageBox.information(None, "Error", "Nama wajah tidak boleh kosong!")
             else:
-                if self.lnLokasi.text() == "":
+                if self.lnLokasiSimpanDB.text() == "":
                     QMessageBox.information(None, "Error", "Pilih folder penyimpanan wajah terlebih dahulu!")
                 else:
-                    folder_name = self.lnLokasi.text() + "/" + self.lnNamaWajah.text()
+                    folder_name = self.lnLokasiSimpanDB.text() + "/" + self.lnNamaWajah.text()
                     os.makedirs(folder_name, exist_ok=True)
                     self.btnNamaWajah.setText("Ganti")            
                     self.lnNamaWajah.setEnabled(False)
@@ -196,8 +217,11 @@ class MyGUI(QMainWindow):
         else:
             cameraIndex = self.boxKameraRegistrasi.currentIndex()
             self.btnStartRegistrasi.setEnabled(False)      
-            self.btnPauseRegistrasi.setEnabled(True)          
+            self.btnPauseRegistrasi.setEnabled(True)    
+            self.btnRegister.setEnabled(True)      
             self.btnStopRegistrasi.setEnabled(True)
+            self.btnKameraRegistrasi.setEnabled(False)
+            self.btnFotoRegistrasi.setEnabled(False)
             self.thread.start()
             
     def tombol_pause(self):
@@ -205,11 +229,24 @@ class MyGUI(QMainWindow):
         self.btnPauseRegistrasi.setEnabled(False)
         self.btnStopRegistrasi.setEnabled(True)
         self.thread.stop()
+
+    def tombol_stop(self):        
+        self.thread.stop()
+        self.detection.clear()
+        self.detection.setText("Detection")
+        self.crop.clear()
+        self.crop.setText("Crop")
+        self.align.clear()
+        self.align.setText("Align")
+        self.btnKameraRegistrasi.setEnabled(True)
+        self.btnFotoRegistrasi.setEnabled(True)
+        self.btnStopRegistrasi.setEnabled(False)
+        self.btnRegister.setEnabled(False)        
     
     def tombol_register(self):
         global aligned_img, file_model_pengenalan
         
-        if self.lnLokasi.text() == "":
+        if self.lnLokasiSimpanDB.text() == "":
             QMessageBox.information(None, "Error", "Mohon masukkan folder penyimpanan database.")
         elif self.lnNamaWajah.text() == "":
             QMessageBox.information(None, "Error", "Mohon isi nama wajah yang akan diregistrasi.")
@@ -217,11 +254,11 @@ class MyGUI(QMainWindow):
             # Simpan gambar wajah ke folder database  
             now = datetime.datetime.now()
             time_now = now.strftime("_%H%M%S.jpg")
-            cv2.imwrite(self.lnLokasi.text() + "/" + self.lnNamaWajah.text() + "/" + self.lnNamaWajah.text() + time_now, aligned_img)
+            cv2.imwrite(self.lnLokasiSimpanDB.text() + "/" + self.lnNamaWajah.text() + "/" + self.lnNamaWajah.text() + time_now, aligned_img)
             
             # Simpan hasil ekstrasi fitur ke folder database dalam bentuk format pickle
             database = {}
-            folder_database = self.lnLokasi.text()
+            folder_database = self.lnLokasiSimpanDB.text()
             for wajah in os.listdir(folder_database):
                 folder_wajah = os.path.join(folder_database, wajah)           
                 if os.path.isdir(folder_wajah):                          
@@ -235,7 +272,57 @@ class MyGUI(QMainWindow):
             lokasi_pickle = os.path.join(folder_database, file_pickle)
             pickle_database = open(lokasi_pickle, "wb")
             pickle.dump(database, pickle_database)
-            pickle_database.close()
+            pickle_database.close()  
+
+    def kamera_pengenalan(self):
+        self.boxKameraPengenalan.setEnabled(True)
+        self.lnVideoFotoPengenalan.setEnabled(False)
+        self.btnLokasiVideoFoto.setEnabled(False)
+        self.boxKameraPengenalan.clear()
+        self.lnVideoFotoPengenalan.clear()
+
+        self.btnStartRegistrasi.setEnabled(True)
+
+        # Tambah list kamera ke combobox
+        cameraList = QMediaDevices.videoInputs()        
+        for c in cameraList:
+            self.boxKameraPengenalan.addItem(c.description())
+
+    def video_foto_pengenalan(self):
+        self.boxKameraPengenalan.setEnabled(False)
+        self.lnVideoFotoPengenalan.setEnabled(True)
+        self.btnLokasiVideoFoto.setEnabled(True)
+        self.boxKameraPengenalan.clear()
+
+        self.btnStartPengenalan.setEnabled(False)
+        self.btnPausePengenalan.setEnabled(False)
+        self.btnStopPengenalan.setEnabled(False)
+
+    def lokasi_video_foto_pengenalan(self):
+        img_video_file = QFileDialog.getOpenFileName(self, "Masukkan video/foto yang akan dikenali", "", "Image/Video Files (*.jpg *.jpeg *.png *.bmp *.mp4)")
+        if img_video_file:
+            path_file = str(img_video_file[0])
+            self.lnVideoFotoPengenalan.setText(path_file)
+            #self.process_image(gambar_subjek)
+
+    def dialog_lokasi_database(self):
+        direktori = QFileDialog.getExistingDirectory(self, "Pilih folder database")
+        if direktori:
+            if str(direktori).split("/")[-1] == "database": 
+                self.lnLokasiDB.setText(str(direktori))
+            else:
+                folder_name = str(direktori) + "/database"
+                os.makedirs(folder_name, exist_ok=True)
+                self.lnLokasiDB.setText(folder_name)
+
+    def tombol_start_pengenalan(self):
+        pass
+
+    def tombol_pause_pengenalan(self):
+        pass
+
+    def tombol_stop_pengenalan(self):
+        pass
 
     def tombol_exit(self):
         sys.exit()
@@ -332,4 +419,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
