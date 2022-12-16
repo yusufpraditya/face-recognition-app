@@ -284,16 +284,6 @@ qproperty-alignment: AlignCenter;</string>
          <property name="title">
           <string>Info</string>
          </property>
-         <widget class="QTextEdit" name="textEdit">
-          <property name="geometry">
-           <rect>
-            <x>10</x>
-            <y>20</y>
-            <width>191</width>
-            <height>241</height>
-           </rect>
-          </property>
-         </widget>
         </widget>
        </item>
       </layout>

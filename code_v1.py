@@ -19,7 +19,7 @@ class VideoThread(QThread):
     crop_signal = pyqtSignal(np.ndarray)
     alignment_signal = pyqtSignal(np.ndarray)
     original_face_signal = pyqtSignal(np.ndarray)
-    similar_face_signal = pyqtSignal(np.ndarray)
+    similar_face_signal = pyqtSignal(str)
 
     global cameraIndex, file_model_deteksi, file_model_pengenalan, mode_pengenalan, lokasi_pickle, folder_database
     isActive = True
@@ -68,14 +68,16 @@ class VideoThread(QThread):
                         else:
                             identity = 'unknown'
                         
+                        identity_path = ""
+                        
                         for dirpath, dirname, filename in os.walk(folder_database):
                             identity_file = identity + ".jpg" 
                             if identity_file in filename:
                                 for name in filename:
-                                    identity_path = os.path.join(dirpath, identity_file)
-                                    print(identity_path)
-                                    print(" ")                                  
-                                
+                                    identity_path = os.path.join(dirpath, identity_file) 
+
+                        if identity_path != "":
+                            self.similar_face_signal.emit(identity_path)
                         self.detection_signal.emit(detected_img)
                         self.crop_signal.emit(face_img)
                         self.alignment_signal.emit(aligned_img)
@@ -157,6 +159,8 @@ class MyGUI(QMainWindow):
         self.thread.detection_signal.connect(self.update_detection)
         self.thread.crop_signal.connect(self.update_crop)
         self.thread.alignment_signal.connect(self.update_align)
+        self.thread.original_face_signal.connect(self.update_original)
+        self.thread.similar_face_signal.connect(self.update_similar)
         print(self.thread.isActive)
         
 
@@ -469,6 +473,49 @@ class MyGUI(QMainWindow):
         qt_img = QPixmap.fromImage(qt_format)
         #self.align.adjustSize()
         self.align.setPixmap(qt_img)
+        #self.align.setScaledContents(True)
+    
+    @pyqtSlot(np.ndarray)
+    def update_original(self, face_img):
+        h, w, _ = face_img.shape
+
+        # Resize
+        if h > self.originalFace.height() or w > self.originalFace.width():
+           h_ratio = self.originalFace.height() / h
+           w_ratio = self.originalFace.width() / w
+           scale_factor = min(h_ratio, w_ratio)
+           h = int(h * scale_factor)
+           w = int(w * scale_factor)
+           dim = (w, h)
+           face_img = cv2.resize(face_img, dim)
+
+        bytes_per_line = 3 * w
+        qt_format = QtGui.QImage(face_img, w, h, bytes_per_line, QtGui.QImage.Format.Format_BGR888)
+        qt_img = QPixmap.fromImage(qt_format)
+        #self.align.adjustSize()
+        self.originalFace.setPixmap(qt_img)
+        #self.align.setScaledContents(True)
+    
+    @pyqtSlot(str)
+    def update_similar(self, path_gambar):
+        face_img = cv2.imread(path_gambar)
+        h, w, _ = face_img.shape
+
+        # Resize
+        if h > self.similarFace.height() or w > self.similarFace.width():
+           h_ratio = self.similarFace.height() / h
+           w_ratio = self.similarFace.width() / w
+           scale_factor = min(h_ratio, w_ratio)
+           h = int(h * scale_factor)
+           w = int(w * scale_factor)
+           dim = (w, h)
+           face_img = cv2.resize(face_img, dim)
+
+        bytes_per_line = 3 * w
+        qt_format = QtGui.QImage(face_img, w, h, bytes_per_line, QtGui.QImage.Format.Format_BGR888)
+        qt_img = QPixmap.fromImage(qt_format)
+        #self.align.adjustSize()
+        self.similarFace.setPixmap(qt_img)
         #self.align.setScaledContents(True)
     
 def main():
