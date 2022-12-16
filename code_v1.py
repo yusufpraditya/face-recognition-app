@@ -11,14 +11,17 @@ import sys
 import os
 import pickle
 from yunet import YuNet
+from sface import SFace
 import datetime
 
 class VideoThread(QThread):
     detection_signal = pyqtSignal(np.ndarray)
     crop_signal = pyqtSignal(np.ndarray)
     alignment_signal = pyqtSignal(np.ndarray)
+    original_face_signal = pyqtSignal(np.ndarray)
+    similar_face_signal = pyqtSignal(np.ndarray)
 
-    global cameraIndex, file_model_deteksi, file_model_pengenalan
+    global cameraIndex, file_model_deteksi, file_model_pengenalan, mode_pengenalan, lokasi_pickle, folder_database
     isActive = True
 
     def run(self):     
@@ -27,23 +30,57 @@ class VideoThread(QThread):
             cap = cv2.VideoCapture(cameraIndex)
         if cameraIndex == 1:
             cap = cv2.VideoCapture(cameraIndex,cv2.CAP_DSHOW)        
-
+        
         while self.isActive:
             _, original_img = cap.read()
-            
-            model = YuNet(model_path=file_model_deteksi)
+
+            pickle_database = open(lokasi_pickle, "rb")
+            database = pickle.load(pickle_database)
+            pickle_database.close()              
+
+            model_yunet = YuNet(model_path=file_model_deteksi)
             w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
             h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-            model.set_input_size([w, h])
+            model_yunet.set_input_size([w, h])
+
+            model_sface = SFace(model_path=file_model_pengenalan)      
            
             try:       
-                detected_img, face_img, landmarks = model.detect(original_img) 
-                aligned_img = model.align_face(face_img, landmarks)
+                detected_img, face_img, landmarks = model_yunet.detect(original_img)
+                aligned_img = model_yunet.align_face(face_img, landmarks)
+                face_feature = model_sface.feature(aligned_img)
                 if detected_img is not None and face_img is not None and landmarks is not None and aligned_img is not None:
-                    
-                    self.detection_signal.emit(detected_img)
-                    self.crop_signal.emit(face_img)
-                    self.alignment_signal.emit(aligned_img)
+                    if mode_pengenalan == False:
+                        self.detection_signal.emit(detected_img)
+                        self.crop_signal.emit(face_img)
+                        self.alignment_signal.emit(aligned_img)
+                    else:
+                        max_cosine = 0
+                        cosine_similarity_threshold = 0.463
+                        identity = 'unknown'
+                        for key, value in database.items():
+                            cosine_score = model_sface.match(face_feature, value)
+                            if cosine_score > max_cosine:
+                                max_cosine = cosine_score
+                                identity = key
+                        if max_cosine >= cosine_similarity_threshold:
+                            identity = identity
+                        else:
+                            identity = 'unknown'
+                        
+                        for dirpath, dirname, filename in os.walk(folder_database):
+                            identity_file = identity + ".jpg" 
+                            if identity_file in filename:
+                                for name in filename:
+                                    identity_path = os.path.join(dirpath, identity_file)
+                                    print(identity_path)
+                                    print(" ")                                  
+                                
+                        self.detection_signal.emit(detected_img)
+                        self.crop_signal.emit(face_img)
+                        self.alignment_signal.emit(aligned_img)
+                        self.original_face_signal.emit(aligned_img)
+                        
                 else:
                     self.detection_signal.emit(original_img)
             except Exception as e:
@@ -211,10 +248,11 @@ class MyGUI(QMainWindow):
             self.lnNamaWajah.setEnabled(True)
     
     def tombol_start(self):
-        global cameraIndex
+        global cameraIndex, mode_pengenalan
         if self.lnDeteksi.text() == "" or self.lnPengenalan.text() == "":
             QMessageBox.information(None, "Error", "Mohon masukkan file model deteksi & pengenalan pada bagian Setting.")
         else:
+            mode_pengenalan = False
             cameraIndex = self.boxKameraRegistrasi.currentIndex()
             self.btnStartRegistrasi.setEnabled(False)      
             self.btnPauseRegistrasi.setEnabled(True)    
@@ -259,7 +297,7 @@ class MyGUI(QMainWindow):
             # Simpan hasil ekstrasi fitur ke folder database dalam bentuk format pickle
             database = {}
             folder_database = self.lnLokasiSimpanDB.text()
-            for wajah in os.listdir(folder_database):
+            for wajah in os.listdir(folder_database):                
                 folder_wajah = os.path.join(folder_database, wajah)           
                 if os.path.isdir(folder_wajah):                          
                     for gambar_wajah in os.listdir(folder_wajah): 
@@ -306,17 +344,38 @@ class MyGUI(QMainWindow):
             #self.process_image(gambar_subjek)
 
     def dialog_lokasi_database(self):
+        global lokasi_pickle, folder_database
         direktori = QFileDialog.getExistingDirectory(self, "Pilih folder database")
         if direktori:
             if str(direktori).split("/")[-1] == "database": 
                 self.lnLokasiDB.setText(str(direktori))
+
+                folder_database = self.lnLokasiDB.text()
+                file_pickle = "database.pkl"
+                lokasi_pickle = os.path.join(folder_database, file_pickle)  
             else:
                 folder_name = str(direktori) + "/database"
                 os.makedirs(folder_name, exist_ok=True)
                 self.lnLokasiDB.setText(folder_name)
 
+                folder_database = self.lnLokasiDB.text()
+                file_pickle = "database.pkl"
+                lokasi_pickle = os.path.join(folder_database, file_pickle)                
+
     def tombol_start_pengenalan(self):
-        pass
+        global cameraIndex, mode_pengenalan
+        if self.lnDeteksi.text() == "" or self.lnPengenalan.text() == "":
+            QMessageBox.information(None, "Error", "Mohon masukkan file model deteksi & pengenalan pada bagian Setting.")
+        else:
+            mode_pengenalan = True
+            cameraIndex = self.boxKameraPengenalan.currentIndex()
+            self.btnStartPengenalan.setEnabled(False)
+            self.btnPausePengenalan.setEnabled(True)            
+            self.btnStopPengenalan.setEnabled(True)
+            self.btnKameraPengenalan.setEnabled(False)
+            self.btnVideoFotoPengenalan.setEnabled(False)
+            self.thread.start()
+
 
     def tombol_pause_pengenalan(self):
         pass

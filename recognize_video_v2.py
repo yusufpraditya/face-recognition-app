@@ -123,7 +123,7 @@ def recognize(face_img, database):
         identity = 'unknown'
 
     for dirpath, dirname, filename in os.walk(faces):            
-        if identity+".jpg" in filename:
+        if identity + ".jpg" in filename:
             identity = dirpath.split("/")[-1]
     return identity, min_l2, max_cosine
 
