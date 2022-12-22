@@ -34,9 +34,10 @@ class VideoThread(QThread):
         while self.isActive:
             _, original_img = cap.read()
 
-            pickle_database = open(lokasi_pickle, "rb")
-            database = pickle.load(pickle_database)
-            pickle_database.close()              
+            if mode_pengenalan:
+                pickle_database = open(lokasi_pickle, "rb")
+                database = pickle.load(pickle_database)
+                pickle_database.close()              
 
             model_yunet = YuNet(model_path=file_model_deteksi)
             w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
