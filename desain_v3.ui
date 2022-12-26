@@ -490,7 +490,7 @@ qproperty-alignment: AlignCenter;</string>
           </size>
          </property>
          <property name="currentIndex">
-          <number>0</number>
+          <number>1</number>
          </property>
          <widget class="QWidget" name="page">
           <layout class="QHBoxLayout" name="horizontalLayout_8">
@@ -750,7 +750,11 @@ qproperty-alignment: AlignCenter;</string>
                  </widget>
                 </item>
                 <item row="2" column="1">
-                 <widget class="QLineEdit" name="lnLokasiDB"/>
+                 <widget class="QLineEdit" name="lnLokasiDB">
+                  <property name="readOnly">
+                   <bool>true</bool>
+                  </property>
+                 </widget>
                 </item>
                 <item row="2" column="2">
                  <widget class="QPushButton" name="btnLokasiDB">

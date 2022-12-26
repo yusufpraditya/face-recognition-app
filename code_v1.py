@@ -22,18 +22,22 @@ class VideoThread(QThread):
     similar_face_signal = pyqtSignal(str)
 
     global cameraIndex, file_model_deteksi, file_model_pengenalan, mode_pengenalan, lokasi_pickle, folder_database
-    isActive = True
+    
+    def __init__(self, my_gui):
+        super().__init__()
+        self.my_gui = my_gui
 
     def run(self):     
         global aligned_img   
         if cameraIndex == 0:
             cap = cv2.VideoCapture(cameraIndex)
         if cameraIndex == 1:
-            cap = cv2.VideoCapture(cameraIndex,cv2.CAP_DSHOW)        
-        
-        while self.isActive:
-            _, original_img = cap.read()
-
+            cap = cv2.VideoCapture(cameraIndex,cv2.CAP_DSHOW)
+        if self.my_gui.mode_videofoto_pengenalan:
+           cap = cv2.VideoCapture(self.my_gui.path_video)
+        self.isActive = True
+        while self.isActive:            
+            _, original_img = cap.read()            
             if mode_pengenalan:
                 pickle_database = open(lokasi_pickle, "rb")
                 database = pickle.load(pickle_database)
@@ -46,58 +50,60 @@ class VideoThread(QThread):
 
             model_sface = SFace(model_path=file_model_pengenalan)      
            
-            try:       
-                detected_img, face_img, landmarks = model_yunet.detect(original_img)
-                aligned_img = model_yunet.align_face(face_img, landmarks)
-                face_feature = model_sface.feature(aligned_img)
-                if detected_img is not None and face_img is not None and landmarks is not None and aligned_img is not None:
-                    if mode_pengenalan == False:
-                        self.detection_signal.emit(detected_img)
-                        self.crop_signal.emit(face_img)
-                        self.alignment_signal.emit(aligned_img)
-                    else:
-                        max_cosine = 0
-                        cosine_similarity_threshold = 0.463
-                        identity = 'unknown'
-                        for key, value in database.items():
-                            cosine_score = model_sface.match(face_feature, value)
-                            if cosine_score > max_cosine:
-                                max_cosine = cosine_score
-                                identity = key
-                        if max_cosine >= cosine_similarity_threshold:
-                            identity = identity
-                        else:
-                            identity = 'unknown'
-                        
-                        identity_path = ""
-                        
-                        for dirpath, dirname, filename in os.walk(folder_database):
-                            identity_file = identity + ".jpg" 
-                            if identity_file in filename:
-                                for name in filename:
-                                    identity_path = os.path.join(dirpath, identity_file) 
-
-                        if identity_path != "":
-                            self.similar_face_signal.emit(identity_path)
-                        self.detection_signal.emit(detected_img)
-                        self.crop_signal.emit(face_img)
-                        self.alignment_signal.emit(aligned_img)
-                        self.original_face_signal.emit(aligned_img)
-                        
+            #try:       
+            detected_img, face_img, landmarks = model_yunet.detect(original_img)
+            aligned_img = model_yunet.align_face(face_img, landmarks)       
+            face_feature = model_sface.feature(aligned_img)            
+            if detected_img is not None and face_img is not None and landmarks is not None and aligned_img is not None and face_feature is not None:
+                if mode_pengenalan == False:
+                    self.detection_signal.emit(detected_img)
+                    self.crop_signal.emit(face_img)
+                    self.alignment_signal.emit(aligned_img)
                 else:
-                    self.detection_signal.emit(original_img)
-            except Exception as e:
-                print(e)            
+                    max_cosine = 0
+                    cosine_similarity_threshold = 0.463
+                    identity = 'unknown'
+                    for key, value in database.items():
+                        cosine_score = model_sface.match(face_feature, value)
+                        if cosine_score > max_cosine:
+                            max_cosine = cosine_score
+                            identity = key
+                    if max_cosine >= cosine_similarity_threshold:
+                        identity = identity
+                    else:
+                        identity = 'unknown'
+                    identity_path = ""
+                    for dirpath, dirname, filename in os.walk(folder_database):
+                        identity_file = identity + ".jpg" 
+                        if identity_file in filename:
+                            for name in filename:
+                                identity_path = os.path.join(dirpath, identity_file) 
+
+                    if identity_path != "":
+                        self.similar_face_signal.emit(identity_path)
+                    self.detection_signal.emit(detected_img)
+                    self.crop_signal.emit(face_img)
+                    self.alignment_signal.emit(aligned_img)
+                    self.original_face_signal.emit(aligned_img)
+                    
+            else:
+                self.detection_signal.emit(original_img)
+            #except Exception as e:
+            #    print(e)            
+            #    print("test")
 
     def stop(self):
         self.isActive = False
         self.quit()
             
-class MyGUI(QMainWindow):
+class MyGUI(QMainWindow):    
     def __init__(self):
-        super(MyGUI, self).__init__()
-        uic.loadUi("desain_v3.ui", self)       
-        self.showFullScreen()
+        super().__init__()
+        uic.loadUi("desain_v3.ui", self)
+        self.show()
+        
+        self.mode_videofoto_pengenalan = False
+        self.path_video = ""
         
         self.display_width = 100
         self.display_height = 100
@@ -152,18 +158,17 @@ class MyGUI(QMainWindow):
         self.btnPausePengenalan.clicked.connect(self.tombol_pause_pengenalan)
         self.btnStopPengenalan.clicked.connect(self.tombol_stop_pengenalan)
 
+
         # Tombol keluar
         self.btnExit.clicked.connect(self.tombol_exit)
         
 
-        self.thread = VideoThread()
+        self.thread = VideoThread(self)
         self.thread.detection_signal.connect(self.update_detection)
         self.thread.crop_signal.connect(self.update_crop)
         self.thread.alignment_signal.connect(self.update_align)
         self.thread.original_face_signal.connect(self.update_original)
         self.thread.similar_face_signal.connect(self.update_similar)
-        print(self.thread.isActive)
-        
 
     def dialog_deteksi_wajah(self):
         global file_model_deteksi
@@ -184,6 +189,10 @@ class MyGUI(QMainWindow):
     def tab_registrasi(self):
         self.pilihanTab.setEnabled(True)
         self.pilihanTab.setCurrentIndex(0)
+        
+        self.btnStartRegistrasi.setEnabled(False)
+        self.btnPauseRegistrasi.setEnabled(False)
+        self.btnStopRegistrasi.setEnabled(False)
 
         self.btnSimilarity.setEnabled(False)
         self.valSimilarity.setEnabled(False)
@@ -191,6 +200,10 @@ class MyGUI(QMainWindow):
     def tab_pengenalan(self):
         self.pilihanTab.setEnabled(True)
         self.pilihanTab.setCurrentIndex(1)
+
+        self.btnStartPengenalan.setEnabled(False)
+        self.btnPausePengenalan.setEnabled(False)
+        self.btnStopPengenalan.setEnabled(False)
 
         self.btnSimilarity.setEnabled(True)
         self.valSimilarity.setEnabled(True)
@@ -283,6 +296,8 @@ class MyGUI(QMainWindow):
         self.align.setText("Align")
         self.btnKameraRegistrasi.setEnabled(True)
         self.btnFotoRegistrasi.setEnabled(True)
+        self.btnStartRegistrasi.setEnabled(True)
+        self.btnPauseRegistrasi.setEnabled(False)
         self.btnStopRegistrasi.setEnabled(False)
         self.btnRegister.setEnabled(False)        
     
@@ -293,6 +308,8 @@ class MyGUI(QMainWindow):
             QMessageBox.information(None, "Error", "Mohon masukkan folder penyimpanan database.")
         elif self.lnNamaWajah.text() == "":
             QMessageBox.information(None, "Error", "Mohon isi nama wajah yang akan diregistrasi.")
+        elif self.btnNamaWajah.text() == "Terapkan":
+            QMessageBox.information(None, "Error", "Klik tombol 'Terapkan' pada nama wajah terlebih dahulu.")
         else:             
             # Simpan gambar wajah ke folder database  
             now = datetime.datetime.now()
@@ -317,36 +334,45 @@ class MyGUI(QMainWindow):
             pickle.dump(database, pickle_database)
             pickle_database.close()  
 
-    def kamera_pengenalan(self):
+    def kamera_pengenalan(self):          
+        self.mode_videofoto_pengenalan = False
         self.boxKameraPengenalan.setEnabled(True)
         self.lnVideoFotoPengenalan.setEnabled(False)
         self.btnLokasiVideoFoto.setEnabled(False)
         self.boxKameraPengenalan.clear()
         self.lnVideoFotoPengenalan.clear()
 
-        self.btnStartRegistrasi.setEnabled(True)
+        self.btnStartPengenalan.setEnabled(True)        
 
         # Tambah list kamera ke combobox
         cameraList = QMediaDevices.videoInputs()        
         for c in cameraList:
             self.boxKameraPengenalan.addItem(c.description())
-
-    def video_foto_pengenalan(self):
+    
+    def video_foto_pengenalan(self):   
+        self.mode_videofoto_pengenalan = True
         self.boxKameraPengenalan.setEnabled(False)
         self.lnVideoFotoPengenalan.setEnabled(True)
         self.btnLokasiVideoFoto.setEnabled(True)
         self.boxKameraPengenalan.clear()
 
-        self.btnStartPengenalan.setEnabled(False)
+        #self.btnStartPengenalan.setEnabled(True)
         self.btnPausePengenalan.setEnabled(False)
         self.btnStopPengenalan.setEnabled(False)
 
-    def lokasi_video_foto_pengenalan(self):
-        img_video_file = QFileDialog.getOpenFileName(self, "Masukkan video/foto yang akan dikenali", "", "Image/Video Files (*.jpg *.jpeg *.png *.bmp *.mp4)")
-        if img_video_file:
-            path_file = str(img_video_file[0])
+    def lokasi_video_foto_pengenalan(self):        
+        img_videofoto_file = QFileDialog.getOpenFileName(self, "Masukkan video/foto yang akan dikenali", "", "Image/Video Files (*.jpg *.jpeg *.png *.bmp *.mp4)")
+        if img_videofoto_file:
+            path_file = str(img_videofoto_file[0])            
             self.lnVideoFotoPengenalan.setText(path_file)
-            #self.process_image(gambar_subjek)
+            file_format = path_file.split('.')[-1]
+            if file_format.lower() in ['jpg', 'jpeg', 'png', 'bmp']:
+                self.btnStartPengenalan.setEnabled(False)           
+                self.process_image(path_file)
+            else:
+                self.btnStartPengenalan.setEnabled(True)
+                self.path_video = path_file
+                #self.process_video(path_file)
 
     def dialog_lokasi_database(self):
         global lokasi_pickle, folder_database
@@ -370,8 +396,18 @@ class MyGUI(QMainWindow):
     def tombol_start_pengenalan(self):
         global cameraIndex, mode_pengenalan
         if self.lnDeteksi.text() == "" or self.lnPengenalan.text() == "":
+            print("test1")
             QMessageBox.information(None, "Error", "Mohon masukkan file model deteksi & pengenalan pada bagian Setting.")
+        
+        elif self.lnLokasiDB.text() == "":
+            print("test3")
+            QMessageBox.information(None, "Error", "Pilih lokasi folder database terlebih dahulu.")        
         else:
+            print("test4")
+            if self.lnVideoFotoPengenalan.text() == "":
+                print("test2")
+                if self.mode_videofoto_pengenalan:
+                    QMessageBox.information(None, "Error", "Pilih file video/foto yang akan dikenali terlebih dahulu.")
             mode_pengenalan = True
             cameraIndex = self.boxKameraPengenalan.currentIndex()
             self.btnStartPengenalan.setEnabled(False)
@@ -383,10 +419,28 @@ class MyGUI(QMainWindow):
 
 
     def tombol_pause_pengenalan(self):
-        pass
+        self.btnStartPengenalan.setEnabled(True)
+        self.btnPausePengenalan.setEnabled(False)
+        self.btnStopPengenalan.setEnabled(True)
+        self.thread.stop()
 
     def tombol_stop_pengenalan(self):
-        pass
+        self.thread.stop()
+        self.detection.clear()
+        self.detection.setText("Detection")
+        self.crop.clear()
+        self.crop.setText("Crop")
+        self.align.clear()
+        self.align.setText("Align")
+        self.originalFace.clear()
+        self.originalFace.setText("Original Face")
+        self.similarFace.clear()
+        self.similarFace.setText("Similar Face")
+        self.btnKameraPengenalan.setEnabled(True)
+        self.btnVideoFotoPengenalan.setEnabled(True)
+        self.btnStartPengenalan.setEnabled(True)
+        self.btnPausePengenalan.setEnabled(False)
+        self.btnStopPengenalan.setEnabled(False)        
 
     def tombol_exit(self):
         sys.exit()
