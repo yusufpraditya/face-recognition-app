@@ -6,6 +6,9 @@ saved_yunet
 yusuf2.png
 asdasd.py
 video.mp4
-test*
+test_*.py
 openai_*.py
 serial_test.py
+README
+database.*
+example.*

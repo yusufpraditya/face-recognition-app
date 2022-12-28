@@ -69,6 +69,7 @@ class YuNet:
             if direction == -1:
                 angle = 90 - angle
             direction = -1 * direction
+            # ERROR!!!!!!!
             new_img = Image.fromarray(image)
             return np.array(new_img.rotate(direction * angle))
         else:

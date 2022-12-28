@@ -13,6 +13,7 @@ import pickle
 from yunet import YuNet
 from sface import SFace
 import datetime
+import time
 
 class VideoThread(QThread):
     detection_signal = pyqtSignal(np.ndarray)
@@ -38,6 +39,7 @@ class VideoThread(QThread):
         self.isActive = True
         tm = cv2.TickMeter()
         while self.isActive:
+            count = 0
             tm.start()            
             _, original_img = cap.read()            
             if self.my_gui.mode_pengenalan:
@@ -70,6 +72,7 @@ class VideoThread(QThread):
                         if cosine_score > max_cosine:
                             max_cosine = cosine_score
                             identity = key
+                    
                     str_max_cosine = "{:.3f}".format(round(max_cosine, 3))
                     self.my_gui.lcdSimilarity.display(str_max_cosine)
                     if max_cosine >= cosine_similarity_threshold:
@@ -77,14 +80,14 @@ class VideoThread(QThread):
                     else:
                         identity = 'unknown'
                     identity_path = ""
-                    for dirpath, dirname, filename in os.walk(folder_database):
+                    for dirpath, dirname, filename in os.walk(folder_database):                        
                         identity_file = identity + ".jpg" 
                         if identity_file in filename:
-                            for name in filename:
+                            for name in filename:                                
                                 identity_path = os.path.join(dirpath, identity_file)
                         else:
                             identity_path = ""
-
+                    count = 0
                     if identity_path != "":
                         self.similar_face_signal.emit(identity_path)
                     else:
@@ -105,7 +108,8 @@ class VideoThread(QThread):
             #    print(e)            
             #    print("test")
 
-    def stop(self):            
+    def stop(self):      
+        #time.sleep(1)      
         self.quit()
         self.isActive = False
         self.my_gui.lcdSimilarity.display("0")
@@ -123,7 +127,7 @@ class VideoThread(QThread):
         self.my_gui.btnVideoFotoPengenalan.setEnabled(True)
         self.my_gui.btnStartPengenalan.setEnabled(True)
         self.my_gui.btnPausePengenalan.setEnabled(False)
-        self.my_gui.btnStopPengenalan.setEnabled(False)
+        self.my_gui.btnStopPengenalan.setEnabled(False)        
             
 class MyGUI(QMainWindow):    
     def __init__(self):
@@ -229,6 +233,7 @@ class MyGUI(QMainWindow):
             self.valSimilarity.setEnabled(True)
 
     def tab_registrasi(self):
+        self.mode_pengenalan = False
         self.pilihanTab.setEnabled(True)
         self.pilihanTab.setCurrentIndex(0)
         
@@ -240,6 +245,7 @@ class MyGUI(QMainWindow):
         self.valSimilarity.setEnabled(False)
     
     def tab_pengenalan(self):
+        self.mode_pengenalan = True
         self.pilihanTab.setEnabled(True)
         self.pilihanTab.setCurrentIndex(1)
 
@@ -290,6 +296,24 @@ class MyGUI(QMainWindow):
                 folder_name = str(direktori) + "/database"
                 os.makedirs(folder_name, exist_ok=True)
                 self.lnLokasiSimpanDB.setText(folder_name)
+            folder_database = self.lnLokasiSimpanDB.text()
+            file_pickle = "database.pkl"
+            lokasi_pickle = os.path.join(folder_database, file_pickle)
+            pickle_database = open(lokasi_pickle, "rb")
+            database = pickle.load(pickle_database)
+            pickle_database.close()
+            name_counts = {}
+            for key in database.keys():                
+                name = key.split("_")[0]
+                if name not in name_counts:
+                    name_counts[name] = 0
+                name_counts[name] += 1
+
+            self.listDatabase.clear()
+            for name, count in name_counts.items():
+                str_list = name + " (" + str(count) + " Frame)"                
+                self.listDatabase.addItem(str_list)                
+
     
     def nama_wajah(self):
         if self.btnNamaWajah.text() == "Terapkan":
@@ -312,7 +336,7 @@ class MyGUI(QMainWindow):
         if self.lnDeteksi.text() == "" or self.lnPengenalan.text() == "":
             QMessageBox.information(None, "Error", "Mohon masukkan file model deteksi & pengenalan pada bagian Setting.")
         else:
-            self.mode_pengenalan = False
+            
             cameraIndex = self.boxKameraRegistrasi.currentIndex()
             self.btnStartRegistrasi.setEnabled(False)      
             self.btnPauseRegistrasi.setEnabled(True)    
@@ -375,6 +399,22 @@ class MyGUI(QMainWindow):
             pickle_database = open(lokasi_pickle, "wb")
             pickle.dump(database, pickle_database)
             pickle_database.close()  
+            
+            pickle_database = open(lokasi_pickle, "rb")
+            database = pickle.load(pickle_database)
+            pickle_database.close()
+            name_counts = {}
+            for key in database.keys():                
+                name = key.split("_")[0]
+                if name not in name_counts:
+                    name_counts[name] = 0
+                name_counts[name] += 1
+
+            self.listDatabase.clear()
+            for name, count in name_counts.items():
+                str_list = name + " (" + str(count) + " Frame)"                
+                self.listDatabase.addItem(str_list)   
+            
 
     def kamera_pengenalan(self):          
         self.mode_kamera_pengenalan = True
@@ -435,11 +475,28 @@ class MyGUI(QMainWindow):
 
                 folder_database = self.lnLokasiDB.text()
                 file_pickle = "database.pkl"
-                lokasi_pickle = os.path.join(folder_database, file_pickle)                
+                lokasi_pickle = os.path.join(folder_database, file_pickle)
+
+            folder_database = self.lnLokasiDB.text()
+            file_pickle = "database.pkl"
+            lokasi_pickle = os.path.join(folder_database, file_pickle)
+            pickle_database = open(lokasi_pickle, "rb")
+            database = pickle.load(pickle_database)
+            pickle_database.close()
+            name_counts = {}
+            for key in database.keys():                
+                name = key.split("_")[0]
+                if name not in name_counts:
+                    name_counts[name] = 0
+                name_counts[name] += 1
+
+            self.listDatabase.clear()
+            for name, count in name_counts.items():
+                str_list = name + " (" + str(count) + " Frame)"                
+                self.listDatabase.addItem(str_list)             
 
     def tombol_start_pengenalan(self):
-        global cameraIndex
-        self.mode_pengenalan = True
+        global cameraIndex        
         if self.lnDeteksi.text() == "" or self.lnPengenalan.text() == "":            
             QMessageBox.information(None, "Error", "Mohon masukkan file model deteksi & pengenalan pada bagian Setting.")        
         elif self.lnLokasiDB.text() == "":            
