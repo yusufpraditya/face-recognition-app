@@ -20,7 +20,7 @@ class VideoThread(QThread):
     crop_signal = pyqtSignal(np.ndarray)
     alignment_signal = pyqtSignal(np.ndarray)
     original_face_signal = pyqtSignal(np.ndarray)
-    similar_face_signal = pyqtSignal(str)
+    similar_face_signal = pyqtSignal(np.ndarray)
 
     global cameraIndex, file_model_deteksi, file_model_pengenalan, lokasi_pickle, folder_database
     
@@ -54,7 +54,7 @@ class VideoThread(QThread):
 
             model_sface = SFace(model_path=file_model_pengenalan)      
            
-            #try:       
+            #try:
             detected_img, face_img, landmarks = model_yunet.detect(original_img)
             aligned_img = model_yunet.align_face(face_img, landmarks)       
             face_feature = model_sface.feature(aligned_img)            
@@ -67,31 +67,24 @@ class VideoThread(QThread):
                     max_cosine = 0
                     cosine_similarity_threshold = float(self.my_gui.valSimilarity.text())
                     identity = 'unknown'
-                    for key, value in database.items():
-                        cosine_score = model_sface.match(face_feature, value)
-                        if cosine_score > max_cosine:
-                            max_cosine = cosine_score
-                            identity = key
+                    for key in database.keys():
+                        name = key.split("_")[0]
+                        if name != "img":
+                            cosine_score = model_sface.match(face_feature, database[key])
+                            if cosine_score > max_cosine:
+                                max_cosine = cosine_score
+                                identity = key
                     
                     str_max_cosine = "{:.3f}".format(round(max_cosine, 3))
                     self.my_gui.lcdSimilarity.display(str_max_cosine)
                     if max_cosine >= cosine_similarity_threshold:
-                        identity = identity
+                        identity_image = database["img_" + identity]
+                        self.similar_face_signal.emit(identity_image)
+                        identity = identity.split("_")[0]                        
                     else:
                         identity = 'unknown'
-                    identity_path = ""
-                    for dirpath, dirname, filename in os.walk(folder_database):                        
-                        identity_file = identity + ".jpg" 
-                        if identity_file in filename:
-                            for name in filename:                                
-                                identity_path = os.path.join(dirpath, identity_file)
-                        else:
-                            identity_path = ""
-                    count = 0
-                    if identity_path != "":
-                        self.similar_face_signal.emit(identity_path)
-                    else:
-                        self.my_gui.similarFace.setText("(Unknown)")
+                    
+                    self.my_gui.lineHasilPengenalan.setText(identity)
                     
                     self.detection_signal.emit(detected_img)
                     self.crop_signal.emit(face_img)
@@ -103,7 +96,7 @@ class VideoThread(QThread):
             tm.stop()
             fps = "{:.2f}".format(round(tm.getFPS(), 2))
             self.my_gui.lcdFPS.display(fps)
-            print(tm.getFPS())
+            
             #except Exception as e:
             #    print(e)            
             #    print("test")
@@ -129,7 +122,7 @@ class VideoThread(QThread):
         self.my_gui.btnPausePengenalan.setEnabled(False)
         self.my_gui.btnStopPengenalan.setEnabled(False)        
             
-class MyGUI(QMainWindow):    
+class MyGUI(QMainWindow):
     def __init__(self):
         super().__init__()
         uic.loadUi("desain_v3.ui", self)
@@ -153,9 +146,10 @@ class MyGUI(QMainWindow):
         self.btnRegister.setEnabled(False)
         self.btnStopRegistrasi.setEnabled(False)        
 
-        # Pilih tab registrasi/pengenalan
+        # Pilih tab registrasi/pengenalan/edit database
         self.btnRegistrasi.clicked.connect(self.tab_registrasi)
         self.btnPengenalan.clicked.connect(self.tab_pengenalan)
+        self.btnEditDB.clicked.connect(self.tab_edit_database)
 
         # Dialog file model deteksi wajah
         self.btnModelDeteksi.clicked.connect(self.dialog_deteksi_wajah)
@@ -196,6 +190,8 @@ class MyGUI(QMainWindow):
         self.btnPausePengenalan.clicked.connect(self.tombol_pause_pengenalan)
         self.btnStopPengenalan.clicked.connect(self.tombol_stop_pengenalan)
 
+        # Lokasi file database yang akan diedit
+        self.btnEditFileDB.clicked.connect(self.dialog_edit_database)
 
         # Tombol keluar
         self.btnExit.clicked.connect(self.tombol_exit)
@@ -256,6 +252,18 @@ class MyGUI(QMainWindow):
         self.btnSimilarity.setEnabled(True)
         self.valSimilarity.setEnabled(True)
     
+    def tab_edit_database(self):
+        self.mode_pengenalan = False
+        self.pilihanTab.setEnabled(True)
+        self.pilihanTab.setCurrentIndex(2)
+
+        self.btnPrevFrame.setEnabled(False)
+        self.btnNextFrame.setEnabled(False)
+        self.btnHapusFrame.setEnabled(False)
+
+        self.btnSimilarity.setEnabled(False)
+        self.valSimilarity.setEnabled(False)
+    
     def kamera_registrasi(self):
         self.boxKameraRegistrasi.setEnabled(True)
         self.lnFotoRegistrasi.setEnabled(False)
@@ -306,9 +314,12 @@ class MyGUI(QMainWindow):
                 name_counts = {}
                 for key in database.keys():                
                     name = key.split("_")[0]
-                    if name not in name_counts:
-                        name_counts[name] = 0
-                    name_counts[name] += 1
+                    if name == "img":
+                        pass
+                    else:
+                        if name not in name_counts:
+                            name_counts[name] = 0
+                        name_counts[name] += 1
 
                 self.listDatabase.clear()
                 for name, count in name_counts.items():
@@ -502,9 +513,12 @@ class MyGUI(QMainWindow):
             name_counts = {}
             for key in database.keys():                
                 name = key.split("_")[0]
-                if name not in name_counts:
-                    name_counts[name] = 0
-                name_counts[name] += 1
+                if name == "img":
+                    pass
+                else:
+                    if name not in name_counts:
+                        name_counts[name] = 0
+                    name_counts[name] += 1
 
             self.listDatabase.clear()
             for name, count in name_counts.items():
@@ -533,7 +547,6 @@ class MyGUI(QMainWindow):
                     self.btnVideoFotoPengenalan.setEnabled(False)
                     self.thread.start()
 
-
     def tombol_pause_pengenalan(self):
         self.btnStartPengenalan.setEnabled(True)
         self.btnPausePengenalan.setEnabled(False)
@@ -545,6 +558,11 @@ class MyGUI(QMainWindow):
 
     def tombol_exit(self):
         sys.exit()
+
+    def dialog_edit_database(self):
+        file_database = QFileDialog.getOpenFileName(self, "Masukkan file database", "", "Pickle File (*.pkl)")
+        if file_database:
+            self.lnEditFileDB.setText(str(file_database[0]))
     
     def process_image(self, path_gambar):        
         global file_model_deteksi
@@ -652,9 +670,8 @@ class MyGUI(QMainWindow):
         self.originalFace.setPixmap(qt_img)
         #self.align.setScaledContents(True)
     
-    @pyqtSlot(str)
-    def update_similar(self, path_gambar):
-        face_img = cv2.imread(path_gambar)
+    @pyqtSlot(np.ndarray)
+    def update_similar(self, face_img):
         h, w, _ = face_img.shape
 
         # Resize
