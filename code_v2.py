@@ -132,7 +132,9 @@ class MyGUI(QMainWindow):
         self.mode_kamera_pengenalan = False
         self.mode_videofoto_pengenalan = False
         self.path_video = ""
-        
+        self.database_keys = []
+        self.database_index = 0
+
         self.display_width = 100
         self.display_height = 100
 
@@ -192,6 +194,11 @@ class MyGUI(QMainWindow):
 
         # Lokasi file database yang akan diedit
         self.btnEditFileDB.clicked.connect(self.dialog_edit_database)
+
+        # Tombol-tombol Tab Edit Database
+        self.btnNextFrame.clicked.connect(self.tombol_next_frame)
+        self.btnPrevFrame.clicked.connect(self.tombol_prev_frame)
+        self.btnHapusFrame.clicked.connect(self.tombol_hapus_frame)
 
         # Tombol keluar
         self.btnExit.clicked.connect(self.tombol_exit)
@@ -563,6 +570,71 @@ class MyGUI(QMainWindow):
         file_database = QFileDialog.getOpenFileName(self, "Masukkan file database", "", "Pickle File (*.pkl)")
         if file_database:
             self.lnEditFileDB.setText(str(file_database[0]))
+            self.btnNextFrame.setEnabled(True)
+            self.btnPrevFrame.setEnabled(True)
+            self.btnHapusFrame.setEnabled(True)
+            
+            lokasi_pickle = self.lnEditFileDB.text()
+            pickle_database = open(lokasi_pickle, "rb")
+            database = pickle.load(pickle_database)
+            pickle_database.close()
+            if self.database_keys == []:
+                for key in database.keys():                    
+                    if "img" in key:
+                        self.database_keys.append(key)
+                print(self.database_keys)
+                self.update_similar(database[self.database_keys[0]])
+    
+    def tombol_next_frame(self):
+        lokasi_pickle = self.lnEditFileDB.text()
+        pickle_database = open(lokasi_pickle, "rb")
+        database = pickle.load(pickle_database)
+        pickle_database.close()        
+        self.database_index += 1
+        if self.database_index < len(self.database_keys):
+            self.update_similar(database[self.database_keys[self.database_index]])
+            print(self.database_keys[self.database_index])
+        else:
+            self.database_index = 0
+            self.update_similar(database[self.database_keys[self.database_index]])
+            print(self.database_keys[self.database_index])
+        print(self.database_index)
+
+    def tombol_prev_frame(self):
+        lokasi_pickle = self.lnEditFileDB.text()
+        pickle_database = open(lokasi_pickle, "rb")
+        database = pickle.load(pickle_database)
+        pickle_database.close()        
+        self.database_index -= 1
+        if self.database_index >= 0:
+            self.update_similar(database[self.database_keys[self.database_index]])
+            print(self.database_keys[self.database_index])
+        else:
+            self.database_index = len(self.database_keys) - 1
+            self.update_similar(database[self.database_keys[self.database_index]])
+            print(self.database_keys[self.database_index])
+        print(self.database_index)
+
+    def tombol_hapus_frame(self):
+        lokasi_pickle = self.lnEditFileDB.text()
+        pickle_database = open(lokasi_pickle, "rb")
+        database = pickle.load(pickle_database)
+        pickle_database.close()  
+
+        if self.database_keys != []:
+            self.update_similar(database[self.database_keys[self.database_index]])
+            del database[self.database_keys[self.database_index]]
+            del database[self.database_keys[self.database_index].replace("img_", "")]
+            self.database_keys.remove(self.database_keys[self.database_index])
+        else:
+            self.similarFace.clear()
+            self.similarFace.setText("Similar Face")
+        print(self.database_keys)
+        print(self.database_index)        
+        print(database.keys())
+        pickle_database = open(lokasi_pickle, "wb")
+        pickle.dump(database, pickle_database)
+        pickle_database.close() 
     
     def process_image(self, path_gambar):        
         global file_model_deteksi
