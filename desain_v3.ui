@@ -607,7 +607,7 @@ Similarity</string>
           </size>
          </property>
          <property name="currentIndex">
-          <number>2</number>
+          <number>1</number>
          </property>
          <widget class="QWidget" name="page">
           <layout class="QHBoxLayout" name="horizontalLayout_8">
@@ -883,7 +883,7 @@ Similarity</string>
                 <item row="2" column="0">
                  <widget class="QLabel" name="label_16">
                   <property name="text">
-                   <string>Folder database</string>
+                   <string>File database</string>
                   </property>
                  </widget>
                 </item>

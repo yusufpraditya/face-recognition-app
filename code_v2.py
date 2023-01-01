@@ -22,7 +22,7 @@ class VideoThread(QThread):
     original_face_signal = pyqtSignal(np.ndarray)
     similar_face_signal = pyqtSignal(np.ndarray)
 
-    global cameraIndex, file_model_deteksi, file_model_pengenalan, lokasi_pickle, folder_database
+    global cameraIndex, file_model_deteksi, file_model_pengenalan, lokasi_pickle
     
     def __init__(self, my_gui):
         super().__init__()
@@ -45,7 +45,7 @@ class VideoThread(QThread):
             if self.my_gui.mode_pengenalan:
                 pickle_database = open(lokasi_pickle, "rb")
                 database = pickle.load(pickle_database)
-                pickle_database.close()              
+                pickle_database.close()  
 
             model_yunet = YuNet(model_path=file_model_deteksi)
             w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -303,18 +303,11 @@ class MyGUI(QMainWindow):
             self.process_image(gambar_subjek)
     
     def dialog_simpan_database(self):
-        direktori = QFileDialog.getExistingDirectory(self, "Pilih folder database")
-        if direktori:
-            if str(direktori).split("/")[-1] == "database": 
-                self.lnLokasiSimpanDB.setText(str(direktori))
-            else:
-                folder_name = str(direktori) + "/database"
-                os.makedirs(folder_name, exist_ok=True)
-                self.lnLokasiSimpanDB.setText(folder_name)
-            try:
-                folder_database = self.lnLokasiSimpanDB.text()
-                file_pickle = "database.pkl"
-                lokasi_pickle = os.path.join(folder_database, file_pickle)
+        file_database = QFileDialog.getSaveFileName(self, "Pilih lokasi penyimpanan database dan nama filenya", "", "Pickle File (*.pkl)")
+        if file_database[0] != "":
+            self.lnLokasiSimpanDB.setText(file_database[0])
+            if os.path.isfile(file_database[0]):
+                lokasi_pickle = file_database[0]
                 pickle_database = open(lokasi_pickle, "rb")
                 database = pickle.load(pickle_database)
                 pickle_database.close()
@@ -331,10 +324,7 @@ class MyGUI(QMainWindow):
                 self.listDatabase.clear()
                 for name, count in name_counts.items():
                     str_list = name + " (" + str(count) + " Frame)"                
-                    self.listDatabase.addItem(str_list)       
-            except:
-                pass         
-
+                    self.listDatabase.addItem(str_list)    
     
     def nama_wajah(self):
         if self.btnNamaWajah.text() == "Terapkan":
@@ -344,9 +334,7 @@ class MyGUI(QMainWindow):
                 if self.lnLokasiSimpanDB.text() == "":
                     QMessageBox.information(None, "Error", "Pilih folder penyimpanan wajah terlebih dahulu!")
                 else:
-                    folder_name = self.lnLokasiSimpanDB.text() + "/" + self.lnNamaWajah.text()
-                    os.makedirs(folder_name, exist_ok=True)
-                    self.btnNamaWajah.setText("Ganti")            
+                    self.btnNamaWajah.setText("Ganti")
                     self.lnNamaWajah.setEnabled(False)
         else:
             self.btnNamaWajah.setText("Terapkan")
@@ -401,11 +389,8 @@ class MyGUI(QMainWindow):
             # Simpan gambar wajah ke folder database  
             now = datetime.datetime.now()
             time_now = now.strftime("%H%M%S")
-            #cv2.imwrite(self.lnLokasiSimpanDB.text() + "/" + self.lnNamaWajah.text() + "/" + self.lnNamaWajah.text() + time_now, aligned_img)
-            
-            folder_database = self.lnLokasiSimpanDB.text()
-            file_pickle = "database.pkl"
-            lokasi_pickle = os.path.join(folder_database, file_pickle)
+
+            lokasi_pickle = self.lnLokasiSimpanDB.text()
             
             # Simpan database dalam format pickle
             database = {}
@@ -423,10 +408,7 @@ class MyGUI(QMainWindow):
             fitur_wajah = model_pengenalan.feature(aligned_img)
             database[nama_wajah] = fitur_wajah
 
-            
-         
-            file_pickle = "database.pkl"
-            lokasi_pickle = os.path.join(folder_database, file_pickle)
+            lokasi_pickle = self.lnLokasiSimpanDB.text()
             pickle_database = open(lokasi_pickle, "wb")
             pickle.dump(database, pickle_database)
             pickle_database.close()  
@@ -448,7 +430,7 @@ class MyGUI(QMainWindow):
             for name, count in name_counts.items():
                 str_list = name + " (" + str(count) + " Frame)"                
                 self.listDatabase.addItem(str_list)   
-            
+            QMessageBox.information(None, "Info", 'Wajah "' + self.lnNamaWajah.text() + '" berhasil ditambahkan!')               
 
     def kamera_pengenalan(self):          
         self.mode_kamera_pengenalan = True
@@ -493,27 +475,14 @@ class MyGUI(QMainWindow):
                 #self.process_video(path_file)
 
     def dialog_lokasi_database(self):
-        global lokasi_pickle, folder_database
-        direktori = QFileDialog.getExistingDirectory(self, "Pilih folder database")
-        if direktori:
-            if str(direktori).split("/")[-1] == "database": 
-                self.lnLokasiDB.setText(str(direktori))
+        global lokasi_pickle
+        
+        file_database = QFileDialog.getOpenFileName(self, "Masukkan file database", "", "Pickle File (*.pkl)")
+        
+        if file_database[0] != "":
+            self.lnLokasiDB.setText(file_database[0])
+            lokasi_pickle = file_database[0]
 
-                folder_database = self.lnLokasiDB.text()
-                file_pickle = "database.pkl"
-                lokasi_pickle = os.path.join(folder_database, file_pickle)  
-            else:
-                folder_name = str(direktori) + "/database"
-                os.makedirs(folder_name, exist_ok=True)
-                self.lnLokasiDB.setText(folder_name)
-
-                folder_database = self.lnLokasiDB.text()
-                file_pickle = "database.pkl"
-                lokasi_pickle = os.path.join(folder_database, file_pickle)
-
-            folder_database = self.lnLokasiDB.text()
-            file_pickle = "database.pkl"
-            lokasi_pickle = os.path.join(folder_database, file_pickle)
             pickle_database = open(lokasi_pickle, "rb")
             database = pickle.load(pickle_database)
             pickle_database.close()
@@ -568,28 +537,31 @@ class MyGUI(QMainWindow):
 
     def dialog_edit_database(self):
         file_database = QFileDialog.getOpenFileName(self, "Masukkan file database", "", "Pickle File (*.pkl)")
-        if file_database:
-            self.lnEditFileDB.setText(str(file_database[0]))
-            self.btnNextFrame.setEnabled(True)
-            self.btnPrevFrame.setEnabled(True)
-            self.btnHapusFrame.setEnabled(True)
+        
+        if file_database[0] != "":
+            self.lnEditFileDB.setText(str(file_database[0]))            
             
             lokasi_pickle = self.lnEditFileDB.text()
             pickle_database = open(lokasi_pickle, "rb")
             database = pickle.load(pickle_database)
-            pickle_database.close()
-            if self.database_keys == []:
+            pickle_database.close()            
+            if self.database_keys == [] and database != {}:
+                self.btnNextFrame.setEnabled(True)
+                self.btnPrevFrame.setEnabled(True)
+                self.btnHapusFrame.setEnabled(True)
                 for key in database.keys():                    
                     if "img" in key:
                         self.database_keys.append(key)
                 print(self.database_keys)
                 self.update_similar(database[self.database_keys[0]])
+            else:
+                QMessageBox.information(None, "Error", "File pickle tidak dapat dibaca. Buat ulang database melalui menu registrasi wajah.")   
     
     def tombol_next_frame(self):
         lokasi_pickle = self.lnEditFileDB.text()
         pickle_database = open(lokasi_pickle, "rb")
         database = pickle.load(pickle_database)
-        pickle_database.close()        
+        pickle_database.close()
         self.database_index += 1
         if self.database_index < len(self.database_keys):
             self.update_similar(database[self.database_keys[self.database_index]])
@@ -621,17 +593,25 @@ class MyGUI(QMainWindow):
         database = pickle.load(pickle_database)
         pickle_database.close()  
 
-        if self.database_keys != []:
-            self.update_similar(database[self.database_keys[self.database_index]])
+        if self.database_keys != []:   
+            print(self.database_keys[self.database_index])
             del database[self.database_keys[self.database_index]]
             del database[self.database_keys[self.database_index].replace("img_", "")]
             self.database_keys.remove(self.database_keys[self.database_index])
+
+            if self.database_keys != []: 
+                print(self.database_keys)
+                print(" ")
+                self.update_similar(database[self.database_keys[self.database_index]])
+            else:
+                self.similarFace.clear()
+                self.similarFace.setText("Similar Face")
+                QMessageBox.information(None, "Error", "Semua data wajah sudah dihapus. Silakan tambahkan data baru melalui menu registrasi wajah.")
         else:
             self.similarFace.clear()
             self.similarFace.setText("Similar Face")
-        print(self.database_keys)
-        print(self.database_index)        
-        print(database.keys())
+            QMessageBox.information(None, "Error", "Data wajah kosong. Silakan tambahkan data baru melalui menu registrasi wajah.")
+
         pickle_database = open(lokasi_pickle, "wb")
         pickle.dump(database, pickle_database)
         pickle_database.close() 
