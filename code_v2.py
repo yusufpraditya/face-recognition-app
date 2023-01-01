@@ -571,6 +571,7 @@ class MyGUI(QMainWindow):
             self.update_similar(database[self.database_keys[self.database_index]])
             print(self.database_keys[self.database_index])
         print(self.database_index)
+        print(" ")
 
     def tombol_prev_frame(self):
         lokasi_pickle = self.lnEditFileDB.text()
@@ -586,6 +587,7 @@ class MyGUI(QMainWindow):
             self.update_similar(database[self.database_keys[self.database_index]])
             print(self.database_keys[self.database_index])
         print(self.database_index)
+        print(" ")
 
     def tombol_hapus_frame(self):
         lokasi_pickle = self.lnEditFileDB.text()
@@ -601,8 +603,13 @@ class MyGUI(QMainWindow):
 
             if self.database_keys != []: 
                 print(self.database_keys)
+                print(self.database_index)
                 print(" ")
-                self.update_similar(database[self.database_keys[self.database_index]])
+                if self.database_index == 0:
+                    self.update_similar(database[self.database_keys[self.database_index]])
+                else:
+                    self.database_index -= 1
+                    self.update_similar(database[self.database_keys[self.database_index]])
             else:
                 self.similarFace.clear()
                 self.similarFace.setText("Similar Face")
