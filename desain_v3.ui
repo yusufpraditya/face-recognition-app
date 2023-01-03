@@ -607,7 +607,7 @@ Similarity</string>
           </size>
          </property>
          <property name="currentIndex">
-          <number>1</number>
+          <number>0</number>
          </property>
          <widget class="QWidget" name="page">
           <layout class="QHBoxLayout" name="horizontalLayout_8">
@@ -689,9 +689,9 @@ Similarity</string>
                  </widget>
                 </item>
                 <item>
-                 <widget class="QRadioButton" name="btnFotoRegistrasi">
+                 <widget class="QRadioButton" name="btnVideoFotoRegistrasi">
                   <property name="text">
-                   <string>Foto</string>
+                   <string>Video/foto</string>
                   </property>
                  </widget>
                 </item>
@@ -718,14 +718,17 @@ Similarity</string>
                 <property name="horizontalSpacing">
                  <number>6</number>
                 </property>
-                <item row="0" column="0">
-                 <widget class="QLabel" name="label_10">
+                <item row="4" column="0">
+                 <widget class="QLabel" name="label_13">
                   <property name="text">
-                   <string>Kamera</string>
+                   <string>Nama wajah</string>
                   </property>
                  </widget>
                 </item>
-                <item row="0" column="1">
+                <item row="4" column="1">
+                 <widget class="QLineEdit" name="lnNamaWajah"/>
+                </item>
+                <item row="1" column="1">
                  <widget class="QComboBox" name="boxKameraRegistrasi">
                   <property name="enabled">
                    <bool>false</bool>
@@ -733,14 +736,21 @@ Similarity</string>
                  </widget>
                 </item>
                 <item row="1" column="0">
-                 <widget class="QLabel" name="label_11">
+                 <widget class="QLabel" name="label_10">
                   <property name="text">
-                   <string>Foto</string>
+                   <string>Kamera</string>
                   </property>
                  </widget>
                 </item>
-                <item row="1" column="1">
-                 <widget class="QLineEdit" name="lnFotoRegistrasi">
+                <item row="2" column="0">
+                 <widget class="QLabel" name="label_11">
+                  <property name="text">
+                   <string>Video/foto</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="2" column="1">
+                 <widget class="QLineEdit" name="lnVideoFotoRegistrasi">
                   <property name="enabled">
                    <bool>false</bool>
                   </property>
@@ -749,8 +759,8 @@ Similarity</string>
                   </property>
                  </widget>
                 </item>
-                <item row="1" column="2">
-                 <widget class="QPushButton" name="btnLokasiFoto">
+                <item row="2" column="2">
+                 <widget class="QPushButton" name="btnLokasiVideoFotoR">
                   <property name="enabled">
                    <bool>false</bool>
                   </property>
@@ -759,14 +769,21 @@ Similarity</string>
                   </property>
                  </widget>
                 </item>
-                <item row="2" column="0">
+                <item row="4" column="2">
+                 <widget class="QPushButton" name="btnNamaWajah">
+                  <property name="text">
+                   <string>Terapkan</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="0">
                  <widget class="QLabel" name="label_12">
                   <property name="text">
                    <string>Lokasi penyimpanan database</string>
                   </property>
                  </widget>
                 </item>
-                <item row="2" column="1">
+                <item row="0" column="1">
                  <widget class="QLineEdit" name="lnLokasiSimpanDB">
                   <property name="dragEnabled">
                    <bool>false</bool>
@@ -776,27 +793,10 @@ Similarity</string>
                   </property>
                  </widget>
                 </item>
-                <item row="2" column="2">
+                <item row="0" column="2">
                  <widget class="QPushButton" name="btnSimpanWajah">
                   <property name="text">
                    <string>Pilih</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="3" column="0">
-                 <widget class="QLabel" name="label_13">
-                  <property name="text">
-                   <string>Nama wajah</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="3" column="1">
-                 <widget class="QLineEdit" name="lnNamaWajah"/>
-                </item>
-                <item row="3" column="2">
-                 <widget class="QPushButton" name="btnNamaWajah">
-                  <property name="text">
-                   <string>Terapkan</string>
                   </property>
                  </widget>
                 </item>

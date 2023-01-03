@@ -172,8 +172,8 @@ class MyGUI(QMainWindow):
 
         # Pilih input (tab registrasi)
         self.btnKameraRegistrasi.clicked.connect(self.kamera_registrasi)
-        self.btnFotoRegistrasi.clicked.connect(self.foto_registrasi)
-        self.btnLokasiFoto.clicked.connect(self.lokasi_foto)    
+        self.btnVideoFotoRegistrasi.clicked.connect(self.foto_registrasi)
+        self.btnLokasiVideoFotoR.clicked.connect(self.lokasi_video_foto_registrasi)    
 
         # Lokasi penyimpanan gambar wajah
         self.btnSimpanWajah.clicked.connect(self.dialog_simpan_database)
@@ -283,10 +283,10 @@ class MyGUI(QMainWindow):
     
     def kamera_registrasi(self):
         self.boxKameraRegistrasi.setEnabled(True)
-        self.lnFotoRegistrasi.setEnabled(False)
-        self.btnLokasiFoto.setEnabled(False)
+        self.lnVideoFotoRegistrasi.setEnabled(False)
+        self.btnLokasiVideoFotoR.setEnabled(False)
         self.boxKameraRegistrasi.clear()
-        self.lnFotoRegistrasi.clear()
+        self.lnVideoFotoRegistrasi.clear()
 
         self.btnStartRegistrasi.setEnabled(True)
 
@@ -297,20 +297,25 @@ class MyGUI(QMainWindow):
     
     def foto_registrasi(self):
         self.boxKameraRegistrasi.setEnabled(False)
-        self.lnFotoRegistrasi.setEnabled(True)
-        self.btnLokasiFoto.setEnabled(True)
+        self.lnVideoFotoRegistrasi.setEnabled(True)
+        self.btnLokasiVideoFotoR.setEnabled(True)
         self.boxKameraRegistrasi.clear()
 
         self.btnStartRegistrasi.setEnabled(False)
         self.btnPauseRegistrasi.setEnabled(False)
         self.btnStopRegistrasi.setEnabled(False)
 
-    def lokasi_foto(self):
-        img_file = QFileDialog.getOpenFileName(self, "Masukkan gambar subjek yang akan diregistrasi", "", "Image Files (*.jpg *.jpeg *.png *.bmp)")
-        if img_file:
-            gambar_subjek = str(img_file[0])
-            self.lnFotoRegistrasi.setText(gambar_subjek)
-            self.process_image(gambar_subjek)
+    def lokasi_video_foto_registrasi(self):
+        if self.lnDeteksi.text() == "" or self.lnPengenalan.text() == "":            
+            QMessageBox.information(None, "Error", "Mohon masukkan file model deteksi & pengenalan pada bagian Setting.")
+        elif self.lnLokasiSimpanDB.text() == "":
+            QMessageBox.information(None, "Error", "Pilih lokasi untuk menyimpan file database terlebih dahulu!") 
+        else:
+            file_video_foto = QFileDialog.getOpenFileName(self, "Masukkan gambar/video subjek yang akan diregistrasi", "", "Image/Video Files (*.jpg *.jpeg *.png *.bmp *.mp4)")
+            if file_video_foto:
+                gambar_subjek = str(file_video_foto[0])
+                self.lnVideoFotoRegistrasi.setText(gambar_subjek)
+                self.process_image(gambar_subjek)
     
     def dialog_simpan_database(self):
         file_database = QFileDialog.getSaveFileName(self, "Pilih lokasi penyimpanan database dan nama filenya", "", "Pickle File (*.pkl)")
@@ -362,7 +367,7 @@ class MyGUI(QMainWindow):
             self.btnRegister.setEnabled(True)      
             self.btnStopRegistrasi.setEnabled(True)
             self.btnKameraRegistrasi.setEnabled(False)
-            self.btnFotoRegistrasi.setEnabled(False)
+            self.btnVideoFotoRegistrasi.setEnabled(False)
             self.thread.start()
             
     def tombol_pause(self):
@@ -384,7 +389,7 @@ class MyGUI(QMainWindow):
         self.align.clear()
         self.align.setText("Align")
         self.btnKameraRegistrasi.setEnabled(True)
-        self.btnFotoRegistrasi.setEnabled(True)
+        self.btnVideoFotoRegistrasi.setEnabled(True)
         self.btnStartRegistrasi.setEnabled(True)
         self.btnPauseRegistrasi.setEnabled(False)
         self.btnStopRegistrasi.setEnabled(False)
