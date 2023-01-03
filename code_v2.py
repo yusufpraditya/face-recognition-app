@@ -89,7 +89,7 @@ class VideoThread(QThread):
                     else:
                         identity = 'unknown'
                     
-                    self.my_gui.lineHasilPengenalan.setText(identity)
+                    self.my_gui.lnHasilPengenalan.setText(identity)
                     
                     self.detection_signal.emit(detected_img)
                     self.crop_signal.emit(face_img)
@@ -134,6 +134,7 @@ class MyGUI(QMainWindow):
         self.pause = False
         self.stop = False
         self.mode_pengenalan = False
+        self.mode_pengenalan_foto = False
         self.mode_kamera_pengenalan = False
         self.mode_videofoto_pengenalan = False
         self.path_video = ""
@@ -473,19 +474,29 @@ class MyGUI(QMainWindow):
         self.btnPausePengenalan.setEnabled(False)
         self.btnStopPengenalan.setEnabled(False)
 
-    def lokasi_video_foto_pengenalan(self):        
-        img_videofoto_file = QFileDialog.getOpenFileName(self, "Masukkan video/foto yang akan dikenali", "", "Image/Video Files (*.jpg *.jpeg *.png *.bmp *.mp4)")
-        if img_videofoto_file:
-            path_file = str(img_videofoto_file[0])            
-            self.lnVideoFotoPengenalan.setText(path_file)
-            file_format = path_file.split('.')[-1]
-            if file_format.lower() in ['jpg', 'jpeg', 'png', 'bmp']:
-                self.btnStartPengenalan.setEnabled(False)           
-                self.process_image(path_file)
-            else:
-                self.btnStartPengenalan.setEnabled(True)
-                self.path_video = path_file
-                #self.process_video(path_file)
+    def lokasi_video_foto_pengenalan(self): 
+        if self.lnDeteksi.text() == "" or self.lnPengenalan.text() == "":            
+            QMessageBox.information(None, "Error", "Mohon masukkan file model deteksi & pengenalan pada bagian Setting.")
+        elif self.lnLokasiDB.text() == "":
+            QMessageBox.information(None, "Error", "Pilih file database terlebih dahulu!") 
+        else:       
+            img_videofoto_file = QFileDialog.getOpenFileName(self, "Masukkan video/foto yang akan dikenali", "", "Image/Video Files (*.jpg *.jpeg *.png *.bmp *.mp4)")
+            if img_videofoto_file:
+                self.clear_label()
+                path_file = str(img_videofoto_file[0])            
+                self.lnVideoFotoPengenalan.setText(path_file)
+                file_format = path_file.split('.')[-1]
+                if file_format.lower() in ['jpg', 'jpeg', 'png', 'bmp']:
+                    if self.btnSimilarity.text() == "Terapkan":
+                        self.lnVideoFotoPengenalan.clear()
+                        QMessageBox.information(None, "Error", "Klik tombol 'Terapkan' pada nilai threshold cosine similarity terlebih dahulu.")
+                    else:
+                        self.btnStartPengenalan.setEnabled(False)    
+                        self.process_image(path_file)
+                else:                    
+                    self.btnStartPengenalan.setEnabled(True)
+                    self.path_video = path_file
+                    #self.process_video(path_file)
 
     def dialog_lokasi_database(self):
         global lokasi_pickle
@@ -712,26 +723,70 @@ class MyGUI(QMainWindow):
         nama = nama.split("_")[1]
         self.lnEditNama.setText(nama)
     
-    def process_image(self, path_gambar):        
-        global file_model_deteksi
+    def process_image(self, path_gambar):
+        file_model_deteksi = self.lnDeteksi.text()
+        file_model_pengenalan = self.lnPengenalan.text()
         
         original_img = cv2.imread(path_gambar)
 
         model = YuNet(model_path=file_model_deteksi)
         h, w, _ = original_img.shape
-        model.set_input_size([w, h])            
+        model.set_input_size([w, h])                         
+
+        model_sface = SFace(model_path=file_model_pengenalan)                 
+           
+        detected_img, face_img, landmarks = model.detect(original_img)   
+        aligned_img = model.align_face(face_img, landmarks)
+        face_feature = model_sface.feature(aligned_img)
              
-        try:     
-            detected_img, face_img, landmarks = model.detect(original_img)   
-            aligned_img = model.align_face(face_img, landmarks)
-            if detected_img is not None and face_img is not None and landmarks is not None:    
-                self.update_detection(detected_img)        
-                self.update_crop(face_img)
-                self.update_align(aligned_img)
-            else:
-                self.update_detection(original_img)  
-        except Exception as e:
-            print(e)                  
+        if detected_img is not None and face_img is not None and landmarks is not None and face_feature is not None:
+            if self.mode_pengenalan: 
+                lokasi_pickle = self.lnLokasiDB.text()
+                pickle_database = open(lokasi_pickle, "rb")
+                database = pickle.load(pickle_database)
+                pickle_database.close() 
+                max_cosine = 0
+                cosine_similarity_threshold = float(self.valSimilarity.text())
+                identity = 'unknown'
+                for key in database.keys():
+                    name = key.split("_")[0]
+                    if name != "img":
+                        cosine_score = model_sface.match(face_feature, database[key])
+                        if cosine_score > max_cosine:
+                            max_cosine = cosine_score
+                            identity = key
+                
+                str_max_cosine = "{:.3f}".format(round(max_cosine, 3))
+                self.lcdSimilarity.display(str_max_cosine)
+                if max_cosine >= cosine_similarity_threshold:
+                    identity_image = database["img_" + identity]
+                    self.update_similar(identity_image)
+                    identity = identity.split("_")[0]                        
+                else:
+                    identity = 'unknown'
+                    self.clear_label()
+
+                self.lnHasilPengenalan.setText(identity)
+                
+                self.update_original(aligned_img)
+
+            self.update_detection(detected_img)        
+            self.update_crop(face_img)
+            self.update_align(aligned_img)
+        else:
+            self.update_detection(original_img)  
+        
+    def clear_label(self):
+        self.detection.clear()
+        self.detection.setText("Detection")
+        self.crop.clear()
+        self.crop.setText("Crop")
+        self.align.clear()
+        self.align.setText("Align")
+        self.originalFace.clear()
+        self.originalFace.setText("Original Face")
+        self.similarFace.clear()
+        self.similarFace.setText("Similar Face")                    
 
     @pyqtSlot(np.ndarray)
     def update_detection(self, cv_img): 
