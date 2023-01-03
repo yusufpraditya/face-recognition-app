@@ -39,8 +39,8 @@ class VideoThread(QThread):
            self.my_gui.panjang_frame_video = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         self.isActive = True
         tm = cv2.TickMeter()
+        
         while self.isActive:
-            count = 0
             tm.start()            
             if self.my_gui.pause:
                 cap.set(cv2.CAP_PROP_POS_FRAMES, self.my_gui.frame_video)
@@ -57,9 +57,8 @@ class VideoThread(QThread):
             h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
             model_yunet.set_input_size([w, h])
 
-            model_sface = SFace(model_path=file_model_pengenalan)      
-           
-            #try:
+            model_sface = SFace(model_path=file_model_pengenalan)
+
             detected_img, face_img, landmarks = model_yunet.detect(original_img)
             aligned_img = model_yunet.align_face(face_img, landmarks)       
             face_feature = model_sface.feature(aligned_img)            
@@ -101,10 +100,6 @@ class VideoThread(QThread):
             tm.stop()
             fps = "{:.2f}".format(round(tm.getFPS(), 2))
             self.my_gui.lcdFPS.display(fps)
-            
-            #except Exception as e:
-            #    print(e)            
-            #    print("test")
 
     def stop(self):      
         #time.sleep(1)      
