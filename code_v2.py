@@ -34,7 +34,7 @@ class VideoThread(QThread):
             cap = cv2.VideoCapture(cameraIndex)
         if cameraIndex == 1:
             cap = cv2.VideoCapture(cameraIndex,cv2.CAP_DSHOW)
-        if self.my_gui.mode_videofoto_pengenalan:
+        if self.my_gui.mode_videofoto_pengenalan or self.my_gui.mode_videofoto_registrasi:
            cap = cv2.VideoCapture(self.my_gui.path_video)
            self.my_gui.panjang_frame_video = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         self.isActive = True
@@ -123,6 +123,7 @@ class MyGUI(QMainWindow):
         self.mode_pengenalan_foto = False
         self.mode_kamera_pengenalan = False
         self.mode_videofoto_pengenalan = False
+        self.mode_videofoto_registrasi = False
         self.path_video = ""
         self.database_keys = []
         self.database_index = 0
@@ -268,6 +269,7 @@ class MyGUI(QMainWindow):
         self.valSimilarity.setEnabled(False)
     
     def kamera_registrasi(self):
+        self.mode_videofoto_registrasi = False
         self.boxKameraRegistrasi.setEnabled(True)
         self.lnVideoFotoRegistrasi.setEnabled(False)
         self.btnLokasiVideoFotoR.setEnabled(False)
@@ -282,6 +284,7 @@ class MyGUI(QMainWindow):
             self.boxKameraRegistrasi.addItem(c.description())
     
     def foto_registrasi(self):
+        self.mode_videofoto_registrasi = True
         self.boxKameraRegistrasi.setEnabled(False)
         self.lnVideoFotoRegistrasi.setEnabled(True)
         self.btnLokasiVideoFotoR.setEnabled(True)
@@ -785,17 +788,20 @@ class MyGUI(QMainWindow):
             self.update_detection(original_img)
         
     def clear_label(self):
-        self.detection.clear()
-        self.detection.setText("Detection")
-        self.crop.clear()
-        self.crop.setText("Crop")
-        self.align.clear()
-        self.align.setText("Align")
-        self.originalFace.clear()
-        self.originalFace.setText("Original Face")
-        self.similarFace.clear()
-        self.similarFace.setText("Similar Face")      
-        self.lnHasilPengenalan.clear()              
+        if self.pause:
+            pass
+        else:
+            self.detection.clear()
+            self.detection.setText("Detection")
+            self.crop.clear()
+            self.crop.setText("Crop")
+            self.align.clear()
+            self.align.setText("Align")
+            self.originalFace.clear()
+            self.originalFace.setText("Original Face")
+            self.similarFace.clear()
+            self.similarFace.setText("Similar Face")      
+            self.lnHasilPengenalan.clear()              
 
     @pyqtSlot(np.ndarray)
     def update_detection(self, cv_img): 
