@@ -106,16 +106,7 @@ class VideoThread(QThread):
         self.quit()
         self.isActive = False
         self.my_gui.lcdSimilarity.display("0")
-        self.my_gui.detection.clear()
-        self.my_gui.detection.setText("Detection")
-        self.my_gui.crop.clear()
-        self.my_gui.crop.setText("Crop")
-        self.my_gui.align.clear()
-        self.my_gui.align.setText("Align")
-        self.my_gui.originalFace.clear()
-        self.my_gui.originalFace.setText("Original Face")
-        self.my_gui.similarFace.clear()
-        self.my_gui.similarFace.setText("Similar Face")
+        self.my_gui.clear_label()
         self.my_gui.btnKameraPengenalan.setEnabled(True)
         self.my_gui.btnVideoFotoPengenalan.setEnabled(True)
     
@@ -308,9 +299,17 @@ class MyGUI(QMainWindow):
         else:
             file_video_foto = QFileDialog.getOpenFileName(self, "Masukkan gambar/video subjek yang akan diregistrasi", "", "Image/Video Files (*.jpg *.jpeg *.png *.bmp *.mp4)")
             if file_video_foto:
-                gambar_subjek = str(file_video_foto[0])
-                self.lnVideoFotoRegistrasi.setText(gambar_subjek)
-                self.process_image(gambar_subjek)
+                self.clear_label()
+                path_file = str(file_video_foto[0])
+                self.lnVideoFotoRegistrasi.setText(path_file)
+                file_format = path_file.split('.')[-1]
+                if file_format.lower() in ['jpg', 'jpeg', 'png', 'bmp']:
+                    self.btnStartRegistrasi.setEnabled(False)
+                    self.btnRegister.setEnabled(True)  
+                    self.process_image(path_file)
+                else:                    
+                    self.btnStartRegistrasi.setEnabled(True)
+                    self.path_video = path_file
     
     def dialog_simpan_database(self):
         file_database = QFileDialog.getSaveFileName(self, "Pilih lokasi penyimpanan database dan nama filenya", "", "Pickle File (*.pkl)")
@@ -334,7 +333,9 @@ class MyGUI(QMainWindow):
                 self.listDatabase.clear()
                 for name, count in name_counts.items():
                     str_list = name + " (" + str(count) + " Frame)"                
-                    self.listDatabase.addItem(str_list)    
+                    self.listDatabase.addItem(str_list)   
+            else:
+                 self.listDatabase.clear()
     
     def nama_wajah(self):
         if self.btnNamaWajah.text() == "Terapkan":
@@ -377,12 +378,7 @@ class MyGUI(QMainWindow):
         self.pause = False
         self.stop = True        
         self.thread.stop()
-        self.detection.clear()
-        self.detection.setText("Detection")
-        self.crop.clear()
-        self.crop.setText("Crop")
-        self.align.clear()
-        self.align.setText("Align")
+        self.clear_label()
         self.btnKameraRegistrasi.setEnabled(True)
         self.btnVideoFotoRegistrasi.setEnabled(True)
         self.btnStartRegistrasi.setEnabled(True)
@@ -400,7 +396,8 @@ class MyGUI(QMainWindow):
         elif self.btnNamaWajah.text() == "Terapkan":
             QMessageBox.information(None, "Error", "Klik tombol 'Terapkan' pada nama wajah terlebih dahulu.")
         else:             
-            # Simpan gambar wajah ke folder database  
+            # Simpan gambar wajah ke folder database 
+            duplikat = False
             now = datetime.datetime.now()
             time_now = now.strftime("%H%M%S")
 
@@ -420,16 +417,27 @@ class MyGUI(QMainWindow):
             nama_wajah = self.lnNamaWajah.text() + "_" + time_now
             model_pengenalan = cv2.FaceRecognizerSF.create(file_model_pengenalan, "")    
             fitur_wajah = model_pengenalan.feature(aligned_img)
-            database[nama_wajah] = fitur_wajah
 
-            lokasi_pickle = self.lnLokasiSimpanDB.text()
-            pickle_database = open(lokasi_pickle, "wb")
-            pickle.dump(database, pickle_database)
-            pickle_database.close()  
+            for value in database.values():
+                if np.array_equal(value, fitur_wajah):
+                    duplikat = True
+                    break
+            
+            if duplikat:
+                QMessageBox.information(None, "Error", "Tidak dapat mendaftar wajah yang sudah dimasukkan sebelumnya.")
+                duplikat = False
+            else:
+                database[nama_wajah] = fitur_wajah
+                lokasi_pickle = self.lnLokasiSimpanDB.text()
+                pickle_database = open(lokasi_pickle, "wb")
+                pickle.dump(database, pickle_database)
+                pickle_database.close()  
+                QMessageBox.information(None, "Info", 'Wajah "' + self.lnNamaWajah.text() + '" berhasil ditambahkan!')  
             
             pickle_database = open(lokasi_pickle, "rb")
             database = pickle.load(pickle_database)
             pickle_database.close()
+
             name_counts = {}
             for key in database.keys():                
                 name = key.split("_")[0]
@@ -444,7 +452,6 @@ class MyGUI(QMainWindow):
             for name, count in name_counts.items():
                 str_list = name + " (" + str(count) + " Frame)"                
                 self.listDatabase.addItem(str_list)   
-            QMessageBox.information(None, "Info", 'Wajah "' + self.lnNamaWajah.text() + '" berhasil ditambahkan!')               
 
     def kamera_pengenalan(self):          
         self.mode_kamera_pengenalan = True
@@ -724,6 +731,7 @@ class MyGUI(QMainWindow):
         self.lnEditNama.setText(nama)
     
     def process_image(self, path_gambar):
+        global aligned_img
         file_model_deteksi = self.lnDeteksi.text()
         file_model_pengenalan = self.lnPengenalan.text()
         
@@ -774,7 +782,7 @@ class MyGUI(QMainWindow):
             self.update_crop(face_img)
             self.update_align(aligned_img)
         else:
-            self.update_detection(original_img)  
+            self.update_detection(original_img)
         
     def clear_label(self):
         self.detection.clear()
@@ -786,7 +794,8 @@ class MyGUI(QMainWindow):
         self.originalFace.clear()
         self.originalFace.setText("Original Face")
         self.similarFace.clear()
-        self.similarFace.setText("Similar Face")                    
+        self.similarFace.setText("Similar Face")      
+        self.lnHasilPengenalan.clear()              
 
     @pyqtSlot(np.ndarray)
     def update_detection(self, cv_img): 
