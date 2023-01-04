@@ -11,3 +11,7 @@ Error
 File "c:\Users\yusuf\OneDrive\Documents\GitHub\pyqt-opencv\yunet.py", line 67, in align_face
     cos_a = (b*b + c*c - a*a) / (2*b*c)
 ZeroDivisionError: float division by zero
+
+File "c:\Users\yusuf\OneDrive\Documents\GitHub\pyqt-opencv\code_v2.py", line 422, in tombol_register
+    fitur_wajah = model_pengenalan.feature(aligned_img)
+cv2.error: OpenCV(4.6.0) D:\a\opencv-python\opencv-python\opencv\modules\imgproc\src\resize.cpp:4052: error: (-215:Assertion failed) !ssize.empty() in function 'cv::resize'
