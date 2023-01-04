@@ -96,6 +96,7 @@ class VideoThread(QThread):
                     self.original_face_signal.emit(aligned_img)
                     
             else:
+                self.my_gui.clear_label()
                 self.detection_signal.emit(original_img)
             tm.stop()
             fps = "{:.2f}".format(round(tm.getFPS(), 2))
@@ -418,25 +419,28 @@ class MyGUI(QMainWindow):
             database[nama_file_gambar] = aligned_img
             
             nama_wajah = self.lnNamaWajah.text() + "_" + time_now
-            model_pengenalan = cv2.FaceRecognizerSF.create(file_model_pengenalan, "")    
-            fitur_wajah = model_pengenalan.feature(aligned_img)
+            model_pengenalan = cv2.FaceRecognizerSF.create(file_model_pengenalan, "")
 
-            for value in database.values():
-                if np.array_equal(value, fitur_wajah):
-                    duplikat = True
-                    break
-            
-            if duplikat:
-                QMessageBox.information(None, "Error", "Tidak dapat mendaftar wajah yang sudah dimasukkan sebelumnya.")
-                duplikat = False
+            if aligned_img is not None: 
+                fitur_wajah = model_pengenalan.feature(aligned_img)
+
+                for value in database.values():
+                    if np.array_equal(value, fitur_wajah):
+                        duplikat = True
+                        break
+                
+                if duplikat:
+                    QMessageBox.information(None, "Error", "Tidak dapat mendaftar wajah yang sudah dimasukkan sebelumnya.")
+                    duplikat = False
+                else:
+                    database[nama_wajah] = fitur_wajah
+                    lokasi_pickle = self.lnLokasiSimpanDB.text()
+                    pickle_database = open(lokasi_pickle, "wb")
+                    pickle.dump(database, pickle_database)
+                    pickle_database.close()  
+                    QMessageBox.information(None, "Info", 'Wajah "' + self.lnNamaWajah.text() + '" berhasil ditambahkan!')
             else:
-                database[nama_wajah] = fitur_wajah
-                lokasi_pickle = self.lnLokasiSimpanDB.text()
-                pickle_database = open(lokasi_pickle, "wb")
-                pickle.dump(database, pickle_database)
-                pickle_database.close()  
-                QMessageBox.information(None, "Info", 'Wajah "' + self.lnNamaWajah.text() + '" berhasil ditambahkan!')  
-            
+                QMessageBox.information(None, "Error", "Gagal.")
             pickle_database = open(lokasi_pickle, "rb")
             database = pickle.load(pickle_database)
             pickle_database.close()
