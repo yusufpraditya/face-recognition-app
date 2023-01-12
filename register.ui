@@ -2,6 +2,14 @@
 <ui version="4.0">
  <class>MainWindow</class>
  <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>965</width>
+    <height>459</height>
+   </rect>
+  </property>
   <property name="windowTitle">
    <string>MainWindow</string>
   </property>
@@ -335,58 +343,34 @@ qproperty-alignment: AlignCenter;</string>
                 <property name="horizontalSpacing">
                  <number>6</number>
                 </property>
-                <item row="1" column="0">
-                 <widget class="QLabel" name="label_10">
-                  <property name="text">
-                   <string>Kamera</string>
-                  </property>
-                 </widget>
+                <item row="2" column="1">
+                 <widget class="QLineEdit" name="lnNamaWajah"/>
                 </item>
-                <item row="1" column="1">
+                <item row="0" column="1">
                  <widget class="QComboBox" name="boxKameraRegistrasi">
                   <property name="enabled">
                    <bool>false</bool>
                   </property>
                  </widget>
                 </item>
-                <item row="3" column="0">
-                 <widget class="QLabel" name="label_13">
-                  <property name="text">
-                   <string>Nama wajah</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="3" column="1">
-                 <widget class="QLineEdit" name="lnNamaWajah"/>
-                </item>
-                <item row="0" column="0">
-                 <widget class="QLabel" name="label_12">
-                  <property name="text">
-                   <string>Lokasi penyimpanan database</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="3" column="2">
+                <item row="2" column="2">
                  <widget class="QPushButton" name="btnNamaWajah">
                   <property name="text">
                    <string>Terapkan</string>
                   </property>
                  </widget>
                 </item>
-                <item row="0" column="1">
-                 <widget class="QLineEdit" name="lnLokasiSimpanDB">
-                  <property name="dragEnabled">
-                   <bool>false</bool>
-                  </property>
-                  <property name="readOnly">
-                   <bool>true</bool>
+                <item row="0" column="0">
+                 <widget class="QLabel" name="label_10">
+                  <property name="text">
+                   <string>Kamera</string>
                   </property>
                  </widget>
                 </item>
-                <item row="0" column="2">
-                 <widget class="QPushButton" name="btnSimpanWajah">
+                <item row="2" column="0">
+                 <widget class="QLabel" name="label_13">
                   <property name="text">
-                   <string>Pilih</string>
+                   <string>Nama wajah</string>
                   </property>
                  </widget>
                 </item>
@@ -422,35 +406,28 @@ qproperty-alignment: AlignCenter;</string>
              <layout class="QGridLayout" name="gridLayout_11">
               <item row="0" column="0">
                <layout class="QGridLayout" name="gridLayout_10">
-                <item row="1" column="0">
+                <item row="0" column="0">
                  <widget class="QLabel" name="label_5">
                   <property name="text">
                    <string>Nama wajah</string>
                   </property>
                  </widget>
                 </item>
-                <item row="0" column="0">
-                 <widget class="QLabel" name="label_4">
-                  <property name="text">
-                   <string>File database</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="1" column="1">
+                <item row="0" column="1">
                  <widget class="QLineEdit" name="lnEditNama">
                   <property name="enabled">
                    <bool>false</bool>
                   </property>
                  </widget>
                 </item>
-                <item row="1" column="2">
+                <item row="0" column="2">
                  <widget class="QPushButton" name="btnEditNama">
                   <property name="text">
                    <string>Ganti</string>
                   </property>
                  </widget>
                 </item>
-                <item row="1" column="3">
+                <item row="0" column="3">
                  <widget class="QPushButton" name="btnBatalEdit">
                   <property name="enabled">
                    <bool>false</bool>
@@ -459,16 +436,6 @@ qproperty-alignment: AlignCenter;</string>
                    <string>Batal</string>
                   </property>
                  </widget>
-                </item>
-                <item row="0" column="3">
-                 <widget class="QPushButton" name="btnEditFileDB">
-                  <property name="text">
-                   <string>Pilih</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="1" colspan="2">
-                 <widget class="QLineEdit" name="lnEditFileDB"/>
                 </item>
                </layout>
               </item>
