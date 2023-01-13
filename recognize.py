@@ -22,15 +22,6 @@ ser = []
 global connected
 connected = False
 
-parser = argparse.ArgumentParser()
-parser.add_argument('--scale', '-sc', type=float, default=1.0, help='Scale factor used to resize input video frames.')
-parser.add_argument('--face_detection_model', '-fd', type=str, default='face_detection_yunet.onnx', help='Path to the face detection model. Download the model at https://github.com/opencv/opencv_zoo/tree/master/models/face_detection_yunet')
-parser.add_argument('--face_recognition_model', '-fr', type=str, default='face_recognition_sface.onnx', help='Path to the face recognition model. Download the model at https://github.com/opencv/opencv_zoo/tree/master/models/face_recognition_sface')
-parser.add_argument('--score_threshold', type=float, default=0.9, help='Filtering out faces of score < score_threshold.')
-parser.add_argument('--nms_threshold', type=float, default=0.3, help='Suppress bounding boxes of iou >= nms_threshold.')
-parser.add_argument('--top_k', type=int, default=5000, help='Keep top_k bounding boxes before NMS.')
-args = parser.parse_args()
-
 def mode(array):
     if array == []:
         return 'unknown'
@@ -103,7 +94,7 @@ def write_serial(identity):
         connect()          
 
 def recognize(img, yunet_detect, database):
-    recognizer = cv.FaceRecognizerSF.create(args.face_recognition_model,"")        
+    recognizer = cv.FaceRecognizerSF.create("face_recognition_sface.onnx", "")        
     face_align = recognizer.alignCrop(img, yunet_detect[1][0])   
     face_feature = recognizer.feature(face_align)
     
@@ -134,18 +125,22 @@ def setup():
     return database
 
 def loop(database):
-    face_detected = 0
+    face_detected = 0    
+    unknown_wait_time = 5
+    known_wait_time = 15
     start_time = time.time()
+    wait_time = time.time()
+    is_waiting = False
     write_count = 0
     arr_identity = []
-
+    arr_identity_serial = []
     yunet = cv.FaceDetectorYN.create(
-        model=args.face_detection_model,
+        model="face_detection_yunet.onnx",
         config='',
         input_size=(320, 320),
-        score_threshold=args.score_threshold,
-        nms_threshold=args.nms_threshold,
-        top_k=args.top_k        
+        score_threshold=0.9,
+        nms_threshold=0.3,
+        top_k=5000        
     )
     webcam_index = cam_index()    
     #cap = cv.VideoCapture(video_name)
@@ -155,7 +150,7 @@ def loop(database):
     frame_h = int(int(cap.get(cv.CAP_PROP_FRAME_HEIGHT)) * scale_percent / 100)    
     
     dim = (frame_w, frame_h)
-    while cv.waitKey(1) < 0:        
+    while cv.waitKey(1) < 0:      
         tm.start()        
         has_frame, img = cap.read()
         if has_frame:
@@ -170,25 +165,48 @@ def loop(database):
                 identity, cosine_score = recognize(img, yunet_detect, database) 
                 arr_identity.append(identity)
 
-                print("face name: ", identity)    
-                print("cosine score: ", cosine_score)
-                print(" ")
+                #print("face name: ", identity)    
+                #print("cosine score: ", cosine_score)
+                #print(" ")
             else:
                 face_detected = 0
                 start_time = time.time()
                 arr_identity.clear()
-            print("face detected count: " + str(face_detected))
-            if face_detected > 5:
-                                
-                identity = mode(arr_identity) 
+            #print("face detected count: " + str(face_detected))
+            if face_detected > 8:                
+                identity = mode(arr_identity)
                 mean_identity = arr_identity.count(identity) / len(arr_identity)
                 if mean_identity < 0.6:
                     identity = 'unknown'
                 elapsed_time = time.time() - start_time
                 print(arr_identity, identity, mean_identity, round(elapsed_time, 2))
-                if write_count == 0:
-                    print(write_count)
-                    write_serial(identity)                
+                # if write_count == 0:
+                #     print(write_count)
+                arr_identity_serial.append(identity)
+                if arr_identity_serial.count(identity) == 1:
+                    is_waiting = False
+                    print("written 1 identity")
+                    write_serial(identity)     
+                    if len(arr_identity_serial) > 1:
+                        arr_identity_serial.clear()
+                        arr_identity_serial.append(identity)
+                if arr_identity_serial.count(identity) == 2:           
+                    is_waiting = True
+                    wait_time = time.time()         
+                if is_waiting:
+                    elapsed_wait_time = time.time() - wait_time                    
+                    if identity == 'unknown':
+                        if elapsed_wait_time > unknown_wait_time:
+                            is_waiting = False
+                            arr_identity_serial.clear()
+                        else:
+                            print("tunggu " + str(round(unknown_wait_time - elapsed_wait_time, 2)) + " detik")
+                    else:
+                        if elapsed_wait_time > known_wait_time:
+                            is_waiting = False
+                            arr_identity_serial.clear()
+                        else:
+                            print("tunggu " + str(round(known_wait_time - elapsed_wait_time, 2)) + " detik")
                 arr_identity.clear()
                 write_count += 1
                 face_detected = 0
@@ -198,8 +216,8 @@ def loop(database):
                 write_count = 0
             serial_written = False
             cv.imshow('frame', img)    
-            
-        
+   
+
         else:
             #txt_file.close()
             #break
