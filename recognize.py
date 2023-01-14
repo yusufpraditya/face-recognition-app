@@ -7,6 +7,8 @@ from serial.tools.list_ports import comports
 import serial
 import time
 import datetime
+from PIL import Image
+import math
 
 
 tm = cv.TickMeter()
@@ -70,10 +72,16 @@ def find_face(input, faces, thickness=2):
         for i in range(len(coords)):
             if coords[i] < 0:
                 coords[i] = 0
-        cv.rectangle(input, (coords[0], coords[1]), (coords[0]+coords[2], coords[1]+coords[3]), (0, 255, 0), thickness)
+        #cv.rectangle(input, (coords[0], coords[1]), (coords[0]+coords[2], coords[1]+coords[3]), (0, 255, 0), thickness)
         face_img = face_img[coords[1]:coords[1] + coords[3], coords[0]:coords[0] + coords[2]]                
         if len(face_img) != 0:                
             return face_img    
+
+def find_landmarks(face):
+    for det in face[1]:
+        landmarks = det[4:14].astype(np.int32).reshape((5,2))
+        if len(landmarks) != 0:
+            return landmarks
 
 def write_serial(identity):
     if ser == []:
@@ -91,28 +99,73 @@ def write_serial(identity):
                 data_str = identity + ",1\n"             
                 ser[i].write(str.encode(data_str))
     except:
-        connect()          
+        connect()    
 
-def recognize(img, yunet_detect, database):
-    recognizer = cv.FaceRecognizerSF.create("face_recognition_sface.onnx", "")        
-    face_align = recognizer.alignCrop(img, yunet_detect[1][0])   
-    face_feature = recognizer.feature(face_align)
-    
+def euclidean_distance(a, b):
+    x1 = a[0]; y1 = a[1]
+    x2 = b[0]; y2 = b[1]
+    return math.sqrt(((x2 - x1) * (x2 - x1)) + ((y2 - y1) * (y2 - y1)))     
+
+def align_face(face_img, landmarks):
+    if landmarks is not None and len(face_img) != 0:
+        left_eye = landmarks[0]
+        right_eye = landmarks[1]
+        
+        if left_eye[1] < right_eye[1]:
+            third_point = (right_eye[0], left_eye[1])
+            direction = -1
+        else:
+            third_point = (left_eye[0], right_eye[1])
+            direction = 1
+
+        a = euclidean_distance(left_eye, third_point)
+        b = euclidean_distance(right_eye, left_eye)
+        c = euclidean_distance(right_eye, third_point)
+        cos_a = (b*b + c*c - a*a) / (2*b*c)
+        angle = (np.arccos(cos_a) * 180) / math.pi
+        if direction == -1:
+            angle = 90 - angle
+        direction = -1 * direction
+        # ERROR!!!!!!!
+        new_img = Image.fromarray(face_img)
+        return np.array(new_img.rotate(direction * angle))
+    else:
+        return None
+
+def recognize(img, yunet_detect, face_img, landmarks, database):
+    recognizer = cv.FaceRecognizerSF.create("face_recognition_sface.onnx", "") 
+    face_align = None       
+    face_align1 = recognizer.alignCrop(img, yunet_detect[1][0])
+    face_feature1 = recognizer.feature(face_align1)
+    face_align2 = align_face(face_img, landmarks)
+    face_align2 = cv.resize(face_align2, (112, 112))
+    face_feature2 = recognizer.feature(face_align2)
+
     max_cosine = 0
     min_l2 = 2
     identity = 'unknown'
 
     for key in database.keys():
         name = key.split("_")[0]        
-        if name != "img":
-            cosine_score = recognizer.match(face_feature, database[key], cv.FaceRecognizerSF_FR_COSINE)
-            if cosine_score > max_cosine:
-                max_cosine = cosine_score
-                identity = key
+        if name != "img":            
+            cosine_score1 = recognizer.match(face_feature1, database[key], cv.FaceRecognizerSF_FR_COSINE)
+            cosine_score2 = recognizer.match(face_feature2, database[key], cv.FaceRecognizerSF_FR_COSINE)
+            
+            if cosine_score1 > cosine_score2:
+                if cosine_score1 > max_cosine:   
+                    face_align = face_align1                 
+                    max_cosine = cosine_score1
+                    identity = key
+            else:
+                if cosine_score2 > max_cosine:
+                    face_align = face_align2                    
+                    max_cosine = cosine_score2
+                    identity = key    
+
     if max_cosine >= cosine_similarity_threshold:
         identity = identity.split("_")[0]
-    else:
-        identity = "unknown"
+    else:        
+        identity = "unknown"   
 
     return identity, max_cosine
 
@@ -127,7 +180,7 @@ def setup():
 def loop(database):
     face_detected = 0    
     unknown_wait_time = 5
-    known_wait_time = 15
+    known_wait_time = 10
     start_time = time.time()
     wait_time = time.time()
     is_waiting = False
@@ -160,20 +213,21 @@ def loop(database):
             yunet_detect = yunet.detect(img)  
             if yunet_detect[1] is not None:
                 face_detected += 1                 
-                #face_img = find_face(img, yunet_detect)
+                face_img = find_face(img, yunet_detect)
+                landmarks = find_landmarks(yunet_detect)
                 
-                identity, cosine_score = recognize(img, yunet_detect, database) 
+                identity, cosine_score = recognize(img, yunet_detect, face_img, landmarks, database) 
                 arr_identity.append(identity)
 
-                #print("face name: ", identity)    
-                #print("cosine score: ", cosine_score)
-                #print(" ")
+                print("face name: ", identity)    
+                print("cosine score: ", cosine_score)
+                print(" ")
             else:
                 face_detected = 0
                 start_time = time.time()
                 arr_identity.clear()
             #print("face detected count: " + str(face_detected))
-            if face_detected > 8:                
+            if face_detected > 3:                
                 identity = mode(arr_identity)
                 mean_identity = arr_identity.count(identity) / len(arr_identity)
                 if mean_identity < 0.6:
@@ -211,13 +265,12 @@ def loop(database):
                 write_count += 1
                 face_detected = 0
                 start_time = time.time()
-                tm.stop()                
+                tm.stop()    
             else:
                 write_count = 0
             serial_written = False
-            cv.imshow('frame', img)    
-   
-
+            cv.imshow('frame', img)   
+        
         else:
             #txt_file.close()
             #break
