@@ -280,7 +280,7 @@ class MyGUI(QMainWindow):
                 QMessageBox.information(None, "Error", "Nama wajah tidak boleh kosong!")
             elif "_" in self.lnNamaWajah.text():
                 QMessageBox.information(None, "Error", 'Tidak dapat menggunakan simbol "_"')
-            elif len(self.lnEditNama.text()) > 17:
+            elif len(self.lnNamaWajah.text()) > 17:
                 QMessageBox.information(None, "Error", 'Nama yang dimasukkan terlalu panjang (maksimal 17 karakter).')
             else:
                 self.btnNamaWajah.setText("Ganti")
