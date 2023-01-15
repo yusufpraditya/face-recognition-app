@@ -12,8 +12,6 @@ import os
 import pickle
 import datetime
 import time
-import math
-from PIL import Image
 
 class VideoThread(QThread):    
     face_signal = pyqtSignal(np.ndarray)    
@@ -31,7 +29,7 @@ class VideoThread(QThread):
             cap = cv2.VideoCapture(cameraIndex)
         else:
             cap = cv2.VideoCapture(cameraIndex,cv2.CAP_DSHOW)
-        scale_percent = 100
+        scale_percent = 30
 
         frame_w = int(int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)) * scale_percent / 100)
         frame_h = int(int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)) * scale_percent / 100)   
@@ -63,11 +61,9 @@ class VideoThread(QThread):
                 model_sface = cv2.FaceRecognizerSF.create(self.my_gui.file_model_pengenalan, "")   
                 
                 detected_img = model_yunet.detect(original_img)
-                face_img = self.find_face(original_img, detected_img)
-                landmarks = self.find_landmarks(detected_img)
+                
                 try:
-                    aligned_img = model_sface.alignCrop(original_img, detected_img[1][0])                  
-
+                    aligned_img = model_sface.alignCrop(original_img, detected_img[1][0])       
                     face_feature = model_sface.feature(aligned_img)
                     if detected_img is not None and aligned_img is not None and face_feature is not None:
                         self.face_signal.emit(aligned_img)
@@ -78,54 +74,6 @@ class VideoThread(QThread):
                     print(fps)
                 except:
                     self.my_gui.clear_label()
-    
-    def find_face(self, input, faces, thickness=2):      
-        face_img = input.copy()   
-        for idx, face in enumerate(faces[1]):
-            coords = face[:-1].astype(np.int32)
-            for i in range(len(coords)):
-                if coords[i] < 0:
-                    coords[i] = 0            
-            face_img = face_img[coords[1]:coords[1] + coords[3], coords[0]:coords[0] + coords[2]]                
-            if len(face_img) != 0:                
-                return face_img   
-                
-    def find_landmarks(self, face):
-        for det in face[1]:
-            landmarks = det[4:14].astype(np.int32).reshape((5,2))
-            if len(landmarks) != 0:
-                return landmarks
-    
-    def euclidean_distance(self, a, b):
-        x1 = a[0]; y1 = a[1]
-        x2 = b[0]; y2 = b[1]
-        return math.sqrt(((x2 - x1) * (x2 - x1)) + ((y2 - y1) * (y2 - y1)))     
-
-    def align_face(self, face_img, landmarks):
-        if landmarks is not None and len(face_img) != 0:
-            left_eye = landmarks[0]
-            right_eye = landmarks[1]
-            
-            if left_eye[1] < right_eye[1]:
-                third_point = (right_eye[0], left_eye[1])
-                direction = -1
-            else:
-                third_point = (left_eye[0], right_eye[1])
-                direction = 1
-
-            a = self.euclidean_distance(left_eye, third_point)
-            b = self.euclidean_distance(right_eye, left_eye)
-            c = self.euclidean_distance(right_eye, third_point)
-            cos_a = (b*b + c*c - a*a) / (2*b*c)
-            angle = (np.arccos(cos_a) * 180) / math.pi
-            if direction == -1:
-                angle = 90 - angle
-            direction = -1 * direction
-            # ERROR!!!!!!!
-            new_img = Image.fromarray(face_img)
-            return np.array(new_img.rotate(direction * angle))
-        else:
-            return None
 
     def stop(self):      
         #time.sleep(1)      
