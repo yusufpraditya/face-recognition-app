@@ -66,20 +66,23 @@ def connect():
                 print(ser)    
 
 def find_face(input, faces, thickness=2):      
-    face_img = input.copy()   
+    face_img = input.copy()
+    det_img = input.copy()
     for idx, face in enumerate(faces[1]):
         coords = face[:-1].astype(np.int32)
         for i in range(len(coords)):
             if coords[i] < 0:
                 coords[i] = 0
-        #cv.rectangle(input, (coords[0], coords[1]), (coords[0]+coords[2], coords[1]+coords[3]), (0, 255, 0), thickness)
+        cv.rectangle(det_img, (coords[0], coords[1]), (coords[0]+coords[2], coords[1]+coords[3]), (0, 255, 0), thickness)
+        cv.imshow('det', det_img)
         face_img = face_img[coords[1]:coords[1] + coords[3], coords[0]:coords[0] + coords[2]]                
         if len(face_img) != 0:                
-            return face_img    
+            return face_img
 
 def find_landmarks(face):
     for det in face[1]:
         landmarks = det[4:14].astype(np.int32).reshape((5,2))
+        
         if len(landmarks) != 0:
             return landmarks
 
@@ -133,14 +136,11 @@ def align_face(face_img, landmarks):
         return None
 
 def recognize(img, yunet_detect, face_img, landmarks, database):
-    recognizer = cv.FaceRecognizerSF.create("face_recognition_sface.onnx", "") 
-    face_align = None       
-    face_align1 = recognizer.alignCrop(img, yunet_detect[1][0])
-    face_feature1 = recognizer.feature(face_align1)
-    face_align2 = align_face(face_img, landmarks)
-    face_align2 = cv.resize(face_align2, (112, 112))
-    face_feature2 = recognizer.feature(face_align2)
-
+    recognizer = cv.FaceRecognizerSF.create("face_recognition_sface.onnx", "")         
+    face_align = recognizer.alignCrop(img, yunet_detect[1][0])
+    face_feature = recognizer.feature(face_align)
+    cv.imshow('align', face_align)
+    
     max_cosine = 0
     min_l2 = 2
     identity = 'unknown'
@@ -148,19 +148,12 @@ def recognize(img, yunet_detect, face_img, landmarks, database):
     for key in database.keys():
         name = key.split("_")[0]        
         if name != "img":            
-            cosine_score1 = recognizer.match(face_feature1, database[key], cv.FaceRecognizerSF_FR_COSINE)
-            cosine_score2 = recognizer.match(face_feature2, database[key], cv.FaceRecognizerSF_FR_COSINE)
-            
-            if cosine_score1 > cosine_score2:
-                if cosine_score1 > max_cosine:   
-                    face_align = face_align1                 
-                    max_cosine = cosine_score1
-                    identity = key
-            else:
-                if cosine_score2 > max_cosine:
-                    face_align = face_align2                    
-                    max_cosine = cosine_score2
-                    identity = key    
+            cosine_score = recognizer.match(face_feature, database[key], cv.FaceRecognizerSF_FR_COSINE)
+                        
+            if cosine_score > max_cosine:   
+                face_align = face_align          
+                max_cosine = cosine_score
+                identity = key
 
     if max_cosine >= cosine_similarity_threshold:
         identity = identity.split("_")[0]
@@ -214,6 +207,7 @@ def loop(database):
             if yunet_detect[1] is not None:
                 face_detected += 1                 
                 face_img = find_face(img, yunet_detect)
+                print("face img size: ", face_img.shape)
                 landmarks = find_landmarks(yunet_detect)
                 
                 identity, cosine_score = recognize(img, yunet_detect, face_img, landmarks, database) 
@@ -268,8 +262,7 @@ def loop(database):
                 tm.stop()    
             else:
                 write_count = 0
-            serial_written = False
-            cv.imshow('frame', img)   
+            serial_written = False              
         
         else:
             #txt_file.close()

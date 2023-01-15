@@ -12,6 +12,7 @@ import os
 import pickle
 import datetime
 import time
+import subprocess
 
 class VideoThread(QThread):    
     face_signal = pyqtSignal(np.ndarray)    
@@ -24,11 +25,13 @@ class VideoThread(QThread):
         self.my_gui = my_gui
 
     def run(self):     
-        global aligned_img   
-        if cameraIndex == 0:
-            cap = cv2.VideoCapture(cameraIndex)
-        else:
-            cap = cv2.VideoCapture(cameraIndex,cv2.CAP_DSHOW)
+        global aligned_img  
+        cap = cv2.VideoCapture(cameraIndex) 
+        # if cameraIndex == 0:
+        #     cap = cv2.VideoCapture(cameraIndex)
+        # else:
+        #     cap = cv2.VideoCapture(cameraIndex,cv2.CAP_DSHOW)
+        print("camera index: ", cameraIndex)
         scale_percent = 30
 
         frame_w = int(int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)) * scale_percent / 100)
@@ -240,8 +243,23 @@ class MyGUI(QMainWindow):
     
     def tombol_start(self):
         global cameraIndex
+        for i in range(0, 11):
+            webcam_path = '/sys/class/video4linux/video' + str(i) + '/name'
+            print(webcam_path)
+            cmd = ['cat', webcam_path]
+            proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            o, e = proc.communicate()            
             
-        cameraIndex = self.boxKameraRegistrasi.currentIndex()
+            if proc.returncode == 0:      
+                webcam_name = ' '.join(o.decode('ascii').split())          
+                print(webcam_name)                
+                print(self.boxKameraRegistrasi.currentText())
+                if webcam_name == self.boxKameraRegistrasi.currentText():        
+                    print("asdasdasd")            
+                    cameraIndex = i
+                    print(cameraIndex)
+                    break                
+        
         self.btnStartRegistrasi.setEnabled(False)      
         self.btnPauseRegistrasi.setEnabled(True)    
         self.btnRegister.setEnabled(True)      
