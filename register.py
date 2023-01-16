@@ -18,8 +18,6 @@ class VideoThread(QThread):
     face_signal = pyqtSignal(np.ndarray)    
     db_face_signal = pyqtSignal(np.ndarray)
     webcam_error_signal = pyqtSignal(str)
-
-    global cameraIndex
     
     def __init__(self, my_gui):
         super().__init__()
@@ -27,9 +25,9 @@ class VideoThread(QThread):
 
     def run(self):     
         global aligned_img  
-        cap = cv2.VideoCapture(cameraIndex) 
+        cap = cv2.VideoCapture(self.my_gui.cameraIndex) 
         
-        print("camera index: ", cameraIndex)
+        print("camera index: ", self.my_gui.cameraIndex)
         scale_percent = 30
         
         frame_w = int(int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)) * scale_percent / 100)
@@ -94,7 +92,7 @@ class MyGUI(QMainWindow):
 
         self.file_model_deteksi = "face_detection_yunet.onnx"
         self.file_model_pengenalan = "face_recognition_sface.onnx"
-        
+        self.cameraIndex = None
         self.pause = False
         self.stop = False
         self.database_kosong = False
@@ -159,11 +157,11 @@ class MyGUI(QMainWindow):
         self.btnPauseRegistrasi.setEnabled(False)
         self.btnStopRegistrasi.setEnabled(False)
 
-        self.boxKameraRegistrasi.setEnabled(True)
-        self.boxKameraRegistrasi.clear()
+        self.boxKameraRegistrasi.setEnabled(True)        
         self.btnStartRegistrasi.setEnabled(True)
 
         # Tambah list kamera ke combobox
+        self.boxKameraRegistrasi.clear()
         cameraList = QCameraInfo.availableCameras()  
         for c in cameraList:
             self.boxKameraRegistrasi.addItem(c.description())
@@ -254,9 +252,9 @@ class MyGUI(QMainWindow):
         self.btnEditDB.setEnabled(True)
         QMessageBox.information(None, "Error", message)
 
-    def tombol_start(self):
-        global cameraIndex
+    def tombol_start(self):        
         for i in range(0, 11):
+            self.cameraIndex = None
             webcam_path = '/sys/class/video4linux/video' + str(i) + '/name'
             print(webcam_path)
             cmd = ['cat', webcam_path]
@@ -268,17 +266,20 @@ class MyGUI(QMainWindow):
                 print(webcam_name)                
                 print(self.boxKameraRegistrasi.currentText())
                 if webcam_name == self.boxKameraRegistrasi.currentText():    
-                    cameraIndex = i
-                    print(cameraIndex)
-                    break                
-        
-        self.btnStartRegistrasi.setEnabled(False)      
-        self.btnPauseRegistrasi.setEnabled(True)    
-        self.btnRegister.setEnabled(True)      
-        self.btnStopRegistrasi.setEnabled(True)   
-        self.btnRegistrasi.setEnabled(False)
-        self.btnEditDB.setEnabled(False)
-        self.thread.start()
+                    self.cameraIndex = i
+                    print(self.cameraIndex)
+                    break               
+       
+        if self.cameraIndex is not None:
+            self.btnStartRegistrasi.setEnabled(False)      
+            self.btnPauseRegistrasi.setEnabled(True)    
+            self.btnRegister.setEnabled(True)      
+            self.btnStopRegistrasi.setEnabled(True)   
+            self.btnRegistrasi.setEnabled(False)
+            self.btnEditDB.setEnabled(False)
+            self.thread.start()
+        else:
+            QMessageBox.information(None, "Error", "Webcam tidak tersambung.")
             
     def tombol_pause(self):
         self.pause = True
