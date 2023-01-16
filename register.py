@@ -21,6 +21,8 @@ class VideoThread(QThread):
     
     def __init__(self, my_gui):
         super().__init__()
+        self.isActive = True
+        self.isStopped = False
         self.my_gui = my_gui
 
     def run(self):     
@@ -33,14 +35,13 @@ class VideoThread(QThread):
         frame_w = int(int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)) * scale_percent / 100)
         frame_h = int(int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)) * scale_percent / 100)   
         dim = (frame_w, frame_h)
-
-        self.isActive = True
+        
         tm = cv2.TickMeter()
 
         if not cap.isOpened():            
             self.webcam_error_signal.emit('Webcam sedang digunakan pada program lain. Tutup terlebih dahulu program tersebut.')
-            
-        while self.isActive:           
+
+        while self.isActive: 
             tm.start()            
             if self.my_gui.pause:
                 cap.set(cv2.CAP_PROP_POS_FRAMES, self.my_gui.frame_video)
@@ -67,7 +68,7 @@ class VideoThread(QThread):
                 try:
                     aligned_img = model_sface.alignCrop(original_img, detected_img[1][0])       
                     face_feature = model_sface.feature(aligned_img)
-                    if detected_img is not None and aligned_img is not None and face_feature is not None:
+                    if detected_img is not None and aligned_img is not None and face_feature is not None:                        
                         self.face_signal.emit(aligned_img)
                     else:
                         self.my_gui.clear_label()
@@ -76,13 +77,15 @@ class VideoThread(QThread):
                     print(fps)
                 except:
                     self.my_gui.clear_label()
-
-    def stop(self):      
-        #time.sleep(1)      
+            if self.isStopped:                
+                print("program stopped")
+                self.my_gui.clear_label()
+                self.isStopped = False
+                self.isActive = False 
+                break
+    def stop(self):     
         self.quit()
         self.isActive = False
-        self.my_gui.clear_label()       
-    
             
 class MyGUI(QMainWindow):
     def __init__(self):
@@ -129,6 +132,7 @@ class MyGUI(QMainWindow):
         self.btnPauseRegistrasi.clicked.connect(self.tombol_pause)
         self.btnStopRegistrasi.clicked.connect(self.tombol_stop)
         self.btnRegister.clicked.connect(self.tombol_register)    
+        self.btnRefresh.clicked.connect(self.tombol_refresh)
 
         # Tombol-tombol Tab Edit Database
         self.btnNextFrame.clicked.connect(self.tombol_next_frame)
@@ -142,7 +146,7 @@ class MyGUI(QMainWindow):
         self.thread = VideoThread(self)        
         self.thread.face_signal.connect(self.update_face)        
         self.thread.db_face_signal.connect(self.update_db_face)
-        self.thread.webcam_error_signal.connect(self.show_message)
+        self.thread.webcam_error_signal.connect(self.show_message)    
 
     def tab_registrasi(self):
         self.clear_label()
@@ -252,7 +256,9 @@ class MyGUI(QMainWindow):
         self.btnEditDB.setEnabled(True)
         QMessageBox.information(None, "Error", message)
 
-    def tombol_start(self):        
+    def tombol_start(self):  
+        self.thread.isStopped = False
+        self.thread.isActive = True      
         for i in range(0, 11):
             self.cameraIndex = None
             webcam_path = '/sys/class/video4linux/video' + str(i) + '/name'
@@ -272,9 +278,9 @@ class MyGUI(QMainWindow):
        
         if self.cameraIndex is not None:
             self.btnStartRegistrasi.setEnabled(False)      
-            self.btnPauseRegistrasi.setEnabled(True)    
-            self.btnRegister.setEnabled(True)      
-            self.btnStopRegistrasi.setEnabled(True)   
+            self.btnPauseRegistrasi.setEnabled(True)
+            self.btnRegister.setEnabled(True)
+            self.btnStopRegistrasi.setEnabled(True)
             self.btnRegistrasi.setEnabled(False)
             self.btnEditDB.setEnabled(False)
             self.thread.start()
@@ -291,15 +297,16 @@ class MyGUI(QMainWindow):
 
     def tombol_stop(self):
         self.pause = False
-        self.stop = True        
-        self.thread.stop()
+        self.stop = True       
+        
+        self.thread.isStopped = True
         self.clear_label()
         self.btnStartRegistrasi.setEnabled(True)
         self.btnPauseRegistrasi.setEnabled(False)
         self.btnStopRegistrasi.setEnabled(False)
         self.btnRegister.setEnabled(False)      
         self.btnRegistrasi.setEnabled(True)
-        self.btnEditDB.setEnabled(True)  
+        self.btnEditDB.setEnabled(True)
     
     def tombol_register(self):
         global aligned_img        
@@ -344,7 +351,7 @@ class MyGUI(QMainWindow):
                     pickle.dump(database, pickle_database)
                     pickle_database.close()  
                     self.update_list_database()
-                    QMessageBox.information(None, "Info", 'Wajah "' + self.lnNamaWajah.text() + '" berhasil ditambahkan!')
+                    QMessageBox.information(None, "Info", 'Wajah "' + self.lnNamaWajah.text() + '" berhasil ditambahkan.')
             else:
                 QMessageBox.information(None, "Error", "Gagal.")
             pickle_database = open("data.pkl", "rb")
@@ -366,6 +373,11 @@ class MyGUI(QMainWindow):
                 str_list = name + " (" + str(count) + " Frame)"                
                 self.listDatabase.addItem(str_list)         
 
+    def tombol_refresh(self):
+        self.boxKameraRegistrasi.clear()
+        cameraList = QCameraInfo.availableCameras()  
+        for c in cameraList:
+            self.boxKameraRegistrasi.addItem(c.description())
    
     def tombol_exit(self):
         sys.exit()
@@ -505,6 +517,8 @@ class MyGUI(QMainWindow):
         pickle.dump(database, pickle_database)
         pickle_database.close()
         self.update_list_database()
+        if self.lnEditNama.text() != "":
+            QMessageBox.information(None, "Info", 'Wajah "' + self.lnEditNama.text() + '" berhasil dihapus.')
     
     def display_nama_wajah(self, nama):
         nama = nama.split("_")[1]
@@ -513,7 +527,8 @@ class MyGUI(QMainWindow):
     def clear_label(self):
         if self.pause:
             pass
-        else:
+        else:            
+            print("label cleared")
             self.face.clear()
             self.face.setText("Face")            
             self.dbFace.clear()
@@ -535,10 +550,8 @@ class MyGUI(QMainWindow):
 
         bytes_per_line = 3 * w
         qt_format = QtGui.QImage(face_img, w, h, bytes_per_line, QtGui.QImage.Format.Format_BGR888)
-        qt_img = QPixmap.fromImage(qt_format)
-        #self.align.adjustSize()
+        qt_img = QPixmap.fromImage(qt_format)        
         self.face.setPixmap(qt_img)
-        #self.align.setScaledContents(True)    
    
     @pyqtSlot(np.ndarray)
     def update_db_face(self, face_img):
@@ -556,10 +569,8 @@ class MyGUI(QMainWindow):
 
         bytes_per_line = 3 * w
         qt_format = QtGui.QImage(face_img, w, h, bytes_per_line, QtGui.QImage.Format.Format_BGR888)
-        qt_img = QPixmap.fromImage(qt_format)
-        #self.align.adjustSize()
-        self.dbFace.setPixmap(qt_img)
-        #self.align.setScaledContents(True)
+        qt_img = QPixmap.fromImage(qt_format)        
+        self.dbFace.setPixmap(qt_img)   
     
 def main():
     app = QApplication([])
