@@ -17,6 +17,7 @@ import subprocess
 class VideoThread(QThread):    
     face_signal = pyqtSignal(np.ndarray)    
     db_face_signal = pyqtSignal(np.ndarray)
+    webcam_error_signal = pyqtSignal(str)
 
     global cameraIndex
     
@@ -27,21 +28,21 @@ class VideoThread(QThread):
     def run(self):     
         global aligned_img  
         cap = cv2.VideoCapture(cameraIndex) 
-        # if cameraIndex == 0:
-        #     cap = cv2.VideoCapture(cameraIndex)
-        # else:
-        #     cap = cv2.VideoCapture(cameraIndex,cv2.CAP_DSHOW)
+        
         print("camera index: ", cameraIndex)
         scale_percent = 30
-
+        
         frame_w = int(int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)) * scale_percent / 100)
         frame_h = int(int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)) * scale_percent / 100)   
         dim = (frame_w, frame_h)
 
         self.isActive = True
         tm = cv2.TickMeter()
-        
-        while self.isActive:
+
+        if not cap.isOpened():            
+            self.webcam_error_signal.emit('Webcam sedang digunakan pada program lain. Tutup terlebih dahulu program tersebut.')
+            
+        while self.isActive:           
             tm.start()            
             if self.my_gui.pause:
                 cap.set(cv2.CAP_PROP_POS_FRAMES, self.my_gui.frame_video)
@@ -143,6 +144,7 @@ class MyGUI(QMainWindow):
         self.thread = VideoThread(self)        
         self.thread.face_signal.connect(self.update_face)        
         self.thread.db_face_signal.connect(self.update_db_face)
+        self.thread.webcam_error_signal.connect(self.show_message)
 
     def tab_registrasi(self):
         self.clear_label()
@@ -240,7 +242,18 @@ class MyGUI(QMainWindow):
         else:
             self.btnNamaWajah.setText("Terapkan")
             self.lnNamaWajah.setEnabled(True)
-    
+
+    @pyqtSlot(str)
+    def show_message(self, message):
+        self.thread.stop()
+        self.btnStartRegistrasi.setEnabled(True)      
+        self.btnPauseRegistrasi.setEnabled(False)    
+        self.btnRegister.setEnabled(False)      
+        self.btnStopRegistrasi.setEnabled(False)   
+        self.btnRegistrasi.setEnabled(True)
+        self.btnEditDB.setEnabled(True)
+        QMessageBox.information(None, "Error", message)
+
     def tombol_start(self):
         global cameraIndex
         for i in range(0, 11):
@@ -254,8 +267,7 @@ class MyGUI(QMainWindow):
                 webcam_name = ' '.join(o.decode('ascii').split())          
                 print(webcam_name)                
                 print(self.boxKameraRegistrasi.currentText())
-                if webcam_name == self.boxKameraRegistrasi.currentText():        
-                    print("asdasdasd")            
+                if webcam_name == self.boxKameraRegistrasi.currentText():    
                     cameraIndex = i
                     print(cameraIndex)
                     break                
