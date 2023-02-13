@@ -1,4 +1,3 @@
-from shutil import ExecError
 from PyQt6.QtWidgets import QMainWindow, QApplication, QFileDialog, QMessageBox
 from PyQt6 import uic, QtGui
 from PyQt6.QtGui import QPixmap
@@ -10,10 +9,7 @@ import numpy as np
 import sys
 import os
 import pickle
-from yunet import YuNet
-from sface import SFace
 import datetime
-import time
 
 class VideoThread(QThread):
     detection_signal = pyqtSignal(np.ndarray)
@@ -29,6 +25,25 @@ class VideoThread(QThread):
         self.isActive = True
         self.isStopped = False
         self.my_gui = my_gui
+    
+    def crop_face(self, original_img, face):
+        face_img = original_img.copy()
+        x, y, w, h = np.maximum(face[0:4].astype(np.int32), 0)
+        face_img = face_img[y:y + h, x:x + w]               
+        return face_img
+    
+    def align_face(self, original_img, face, model_sface):
+        aligned_img = model_sface.alignCrop(original_img, face)
+        return aligned_img
+
+    def visualize(self, original_img, face):
+        detected_img = original_img.copy()
+        x, y, w, h = np.maximum(face[0:4].astype(np.int32), 0)
+        start_point = (x, y)
+        end_point = (x + w, y + h)
+        rectangle_color = (0, 255, 0)
+        cv2.rectangle(detected_img, start_point, end_point, rectangle_color, thickness=2)
+        return detected_img
 
     def run(self):     
         global aligned_img   
@@ -39,6 +54,19 @@ class VideoThread(QThread):
            self.my_gui.panjang_frame_video = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         
         tm = cv2.TickMeter()
+
+        w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        
+        model_yunet = cv2.FaceDetectorYN.create(
+                    model=file_model_deteksi,
+                    config="",
+                    input_size=(w, h),
+                    score_threshold=0.7,
+                    nms_threshold=0.3,
+                    top_k=1)
+        
+        model_sface = cv2.FaceRecognizerSF.create(model=file_model_pengenalan, config="")
         
         while self.isActive:
             tm.start()            
@@ -50,26 +78,23 @@ class VideoThread(QThread):
             if self.my_gui.mode_pengenalan:
                 pickle_database = open(lokasi_pickle, "rb")
                 database = pickle.load(pickle_database)
-                pickle_database.close()  
+                pickle_database.close()           
 
-            model_yunet = YuNet(model_path=file_model_deteksi)
-            w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-            h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-            model_yunet.set_input_size([w, h])
-
-            model_sface = SFace(model_path=file_model_pengenalan)
-
-            detected_img, face_img, landmarks = model_yunet.detect(original_img)
-            aligned_img = model_yunet.align_face(face_img, landmarks)       
-            face_feature = model_sface.feature(aligned_img)   
+            faces = model_yunet.detect(original_img)[1]                        
 
             if self.isStopped:
                 self.my_gui.clear_all_labels()
                 self.isStopped = False
                 self.isActive = False
                 break         
-            
-            if detected_img is not None and face_img is not None and landmarks is not None and aligned_img is not None and face_feature is not None:
+
+            if faces is not None:
+                for face in faces:
+                    detected_img = self.visualize(original_img, face)
+                    face_img = self.crop_face(original_img, face)
+                    aligned_img = self.align_face(original_img, face, model_sface)   
+                    face_feature = model_sface.feature(aligned_img)
+
                 if self.my_gui.mode_pengenalan == False:
                     self.detection_signal.emit(detected_img)
                     self.crop_signal.emit(face_img)
@@ -88,6 +113,7 @@ class VideoThread(QThread):
                     
                     str_max_cosine = "{:.3f}".format(round(max_cosine, 3))
                     self.my_gui.lcdSimilarity.display(str_max_cosine)
+                    print(str_max_cosine)
                     if max_cosine >= cosine_similarity_threshold:
                         identity_image = database["img_" + identity]
                         self.similar_face_signal.emit(identity_image)
@@ -104,7 +130,7 @@ class VideoThread(QThread):
                     self.original_face_signal.emit(aligned_img)
                     
             else:
-                self.my_gui.clear_all_labels()
+                self.my_gui.clear_small_labels()
                 self.detection_signal.emit(original_img)
             tm.stop()
             fps = "{:.2f}".format(round(tm.getFPS(), 2))
@@ -126,8 +152,7 @@ class MyGUI(QMainWindow):
         uic.loadUi("desain_v3.ui", self)
         self.show()
         
-        self.pause = False
-        self.stop = False
+        self.pause = False        
         self.mode_pengenalan = False
         self.mode_pengenalan_foto = False
         self.mode_kamera_pengenalan = False
@@ -380,16 +405,14 @@ class MyGUI(QMainWindow):
             self.thread.start()
             
     def tombol_pause(self):
-        self.pause = True
-        self.stop = False
+        self.pause = True        
         self.btnStartRegistrasi.setEnabled(True)
         self.btnPauseRegistrasi.setEnabled(False)
         self.btnStopRegistrasi.setEnabled(True)
         self.thread.stop()
 
     def tombol_stop(self):
-        self.pause = False
-        self.stop = True        
+        self.pause = False               
         self.thread.isStopped = True
         self.clear_all_labels()
         self.btnKameraRegistrasi.setEnabled(True)
@@ -550,6 +573,8 @@ class MyGUI(QMainWindow):
 
     def tombol_start_pengenalan(self):
         global cameraIndex        
+        self.thread.isStopped = False
+        self.thread.isActive = True  
         if self.lnDeteksi.text() == "" or self.lnPengenalan.text() == "":            
             QMessageBox.information(None, "Error", "Mohon masukkan file model deteksi & pengenalan pada bagian Setting.")        
         elif self.lnLokasiDB.text() == "":            
@@ -571,20 +596,18 @@ class MyGUI(QMainWindow):
                 self.thread.start()
 
     def tombol_pause_pengenalan(self):
-        self.pause = True
-        self.stop = False
+        self.pause = True       
         self.btnStartPengenalan.setEnabled(True)
         self.btnPausePengenalan.setEnabled(False)
         self.btnStopPengenalan.setEnabled(True)
         self.thread.stop()
 
     def tombol_stop_pengenalan(self):
-        self.pause = False
-        self.stop = True
+        self.pause = False       
         self.btnStartPengenalan.setEnabled(True)
         self.btnPausePengenalan.setEnabled(False)
         self.btnStopPengenalan.setEnabled(False)
-        self.thread.stop()              
+        self.thread.isStopped = True            
 
     def tombol_exit(self):
         sys.exit()
@@ -752,18 +775,26 @@ class MyGUI(QMainWindow):
         file_model_pengenalan = self.lnPengenalan.text()
         
         original_img = cv2.imread(path_gambar)
-
-        model = YuNet(model_path=file_model_deteksi)
         h, w, _ = original_img.shape
-        model.set_input_size([w, h])                         
+        model_yunet = cv2.FaceDetectorYN.create(
+                    model=file_model_deteksi,
+                    config="",
+                    input_size=(w, h),
+                    score_threshold=0.7,
+                    nms_threshold=0.3,
+                    top_k=1)
+        
+        model_sface = cv2.FaceRecognizerSF.create(model=file_model_pengenalan, config="")
 
-        model_sface = SFace(model_path=file_model_pengenalan)                 
-           
-        detected_img, face_img, landmarks = model.detect(original_img)   
-        aligned_img = model.align_face(face_img, landmarks)
-        face_feature = model_sface.feature(aligned_img)
+        faces = model_yunet.detect(original_img)[1]
+        if faces is not None:
+            for face in faces:
+                detected_img = self.visualize(original_img, face)
+                face_img = self.crop_face(original_img, face)
+                aligned_img = self.align_face(original_img, face, model_sface)        
              
-        if detected_img is not None and face_img is not None and landmarks is not None and face_feature is not None:
+        if detected_img is not None and face_img is not None:
+            face_feature = model_sface.feature(aligned_img)
             if self.mode_pengenalan: 
                 lokasi_pickle = self.lnLokasiDB.text()
                 pickle_database = open(lokasi_pickle, "rb")
@@ -815,10 +846,43 @@ class MyGUI(QMainWindow):
             self.similarFace.clear()
             self.similarFace.setText("Similar Face")      
             self.lnHasilPengenalan.clear()
+    
+    def clear_small_labels(self):
+        if self.pause:
+            pass
+        else:
+            self.crop.clear()
+            self.crop.setText("Crop")
+            self.align.clear()
+            self.align.setText("Align")
+            self.originalFace.clear()
+            self.originalFace.setText("Original Face")
+            self.similarFace.clear()
+            self.similarFace.setText("Similar Face")      
+            self.lnHasilPengenalan.clear()
 
     def clear_sf_label(self):
         self.similarFace.clear()
         self.similarFace.setText("Similar Face")    
+    
+    def crop_face(self, original_img, face):
+        face_img = original_img.copy()
+        x, y, w, h = np.maximum(face[0:4].astype(np.int32), 0)
+        face_img = face_img[y:y + h, x:x + w]               
+        return face_img
+    
+    def align_face(self, original_img, face, model_sface):
+        aligned_img = model_sface.alignCrop(original_img, face)
+        return aligned_img
+
+    def visualize(self, original_img, face):
+        detected_img = original_img.copy()
+        x, y, w, h = np.maximum(face[0:4].astype(np.int32), 0)
+        start_point = (x, y)
+        end_point = (x + w, y + h)
+        rectangle_color = (0, 255, 0)
+        cv2.rectangle(detected_img, start_point, end_point, rectangle_color, thickness=2)
+        return detected_img
 
     @pyqtSlot(np.ndarray)
     def update_detection(self, cv_img): 
@@ -837,9 +901,7 @@ class MyGUI(QMainWindow):
         bytes_per_line = 3 * w
         qt_format = QtGui.QImage(cv_img, w, h, bytes_per_line, QtGui.QImage.Format.Format_BGR888)        
         qt_img = QPixmap.fromImage(qt_format)        
-        #self.detection.adjustSize()
         self.detection.setPixmap(qt_img)
-        #self.detection.setScaledContents(True)
 
     @pyqtSlot(np.ndarray)
     def update_crop(self, face_img):
@@ -859,9 +921,7 @@ class MyGUI(QMainWindow):
         bytes_per_line = 3 * w
         qt_format = QtGui.QImage(face_img, w, h, bytes_per_line, QtGui.QImage.Format.Format_BGR888)        
         qt_img = QPixmap.fromImage(qt_format)
-        #self.crop.adjustSize()
         self.crop.setPixmap(qt_img)
-        #self.crop.setScaledContents(True)
 
     @pyqtSlot(np.ndarray)
     def update_align(self, face_img):
@@ -880,9 +940,7 @@ class MyGUI(QMainWindow):
         bytes_per_line = 3 * w
         qt_format = QtGui.QImage(face_img, w, h, bytes_per_line, QtGui.QImage.Format.Format_BGR888)
         qt_img = QPixmap.fromImage(qt_format)
-        #self.align.adjustSize()
         self.align.setPixmap(qt_img)
-        #self.align.setScaledContents(True)
     
     @pyqtSlot(np.ndarray)
     def update_original(self, face_img):
@@ -901,9 +959,7 @@ class MyGUI(QMainWindow):
         bytes_per_line = 3 * w
         qt_format = QtGui.QImage(face_img, w, h, bytes_per_line, QtGui.QImage.Format.Format_BGR888)
         qt_img = QPixmap.fromImage(qt_format)
-        #self.align.adjustSize()
         self.originalFace.setPixmap(qt_img)
-        #self.align.setScaledContents(True)
     
     @pyqtSlot(np.ndarray)
     def update_similar(self, face_img):
@@ -922,9 +978,7 @@ class MyGUI(QMainWindow):
         bytes_per_line = 3 * w
         qt_format = QtGui.QImage(face_img, w, h, bytes_per_line, QtGui.QImage.Format.Format_BGR888)
         qt_img = QPixmap.fromImage(qt_format)
-        #self.align.adjustSize()
         self.similarFace.setPixmap(qt_img)
-        #self.align.setScaledContents(True)
     
 def main():
     app = QApplication([])

@@ -4,7 +4,7 @@ import math
 from PIL import Image
 
 class YuNet:
-    def __init__(self, model_path, input_size=[320, 320], score_threshold=0.7, nms_threshold=0.3, top_k=5000):
+    def __init__(self, model_path, input_size=[320, 320], score_threshold=0.7, nms_threshold=0.3, top_k=1):
         self.tm = cv2.TickMeter()
         self.model_path = model_path
         self.input_size = input_size
@@ -35,19 +35,30 @@ class YuNet:
     def set_input_size(self, input_size):
         self.model.setInputSize(tuple(input_size))
     
-    def detect(self, image):
+    def crop_face(self, image):
         cropped_face = image.copy()
         faces = self.model.detect(image)
         if faces[1] is not None:
             for det in faces[1]:
-                bbox = det[0:4].astype(np.int32)
-                cv2.rectangle(image, (bbox[0], bbox[1]), (bbox[0]+bbox[2], bbox[1]+bbox[3]), (0, 255, 0), 2)
-                cropped_face = cropped_face[bbox[1]:bbox[1] + bbox[3], bbox[0]:bbox[0] + bbox[2]]
-                landmarks = det[4:14].astype(np.int32).reshape((5,2))
-                return image, cropped_face, landmarks
+                x, y, w, h = np.maximum(det[0:4].astype(np.int32), 0)
+                cropped_face = cropped_face[y:y + h, x:x + w]               
+                return cropped_face
         else:
-            return None, None, None
+            return None
         
+    def visualize(self, image):
+        detected_face = image.copy()
+        faces = self.model.detect(image)
+        if faces[1] is not None:
+            for det in faces[1]:
+                x, y, w, h = np.maximum(det[0:4].astype(np.int32), 0)
+                start_point = (x, y)
+                end_point = (x + w, y + h)
+                rectangle_color = (0, 255, 0)
+                cv2.rectangle(detected_face, start_point, end_point, rectangle_color, thickness=2)
+                return detected_face
+        else:
+            return None
 
     def align_face(self, image, landmarks):
         if landmarks is not None and len(image) != 0:
