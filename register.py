@@ -83,6 +83,7 @@ class VideoThread(QThread):
                 self.isStopped = False
                 self.isActive = False 
                 break
+            
     def stop(self):     
         self.quit()
         self.isActive = False

@@ -1,11 +1,12 @@
 1. Bug Pillow
-2. Button edit database DONE
 3. CUDA
 4. Panduan = pake desain
-5. handle nama dengan simbol "_" DONE
 6. Desain UI
 7. Handle unknown
 8. Refactor
+
+2. Button edit database DONE
+5. handle nama dengan simbol "_" DONE
 
 Error
 File "c:\Users\yusuf\OneDrive\Documents\GitHub\pyqt-opencv\yunet.py", line 67, in align_face

@@ -26,18 +26,18 @@ class VideoThread(QThread):
     
     def __init__(self, my_gui):
         super().__init__()
+        self.isActive = True
+        self.isStopped = False
         self.my_gui = my_gui
 
     def run(self):     
         global aligned_img   
-        if cameraIndex == 0:
-            cap = cv2.VideoCapture(cameraIndex)
-        if cameraIndex == 1:
-            cap = cv2.VideoCapture(cameraIndex,cv2.CAP_DSHOW)
+        cap = cv2.VideoCapture(cameraIndex)
+
         if self.my_gui.mode_videofoto_pengenalan or self.my_gui.mode_videofoto_registrasi:
            cap = cv2.VideoCapture(self.my_gui.path_video)
            self.my_gui.panjang_frame_video = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-        self.isActive = True
+        
         tm = cv2.TickMeter()
         
         while self.isActive:
@@ -61,7 +61,14 @@ class VideoThread(QThread):
 
             detected_img, face_img, landmarks = model_yunet.detect(original_img)
             aligned_img = model_yunet.align_face(face_img, landmarks)       
-            face_feature = model_sface.feature(aligned_img)            
+            face_feature = model_sface.feature(aligned_img)   
+
+            if self.isStopped:
+                self.my_gui.clear_all_labels()
+                self.isStopped = False
+                self.isActive = False
+                break         
+            
             if detected_img is not None and face_img is not None and landmarks is not None and aligned_img is not None and face_feature is not None:
                 if self.my_gui.mode_pengenalan == False:
                     self.detection_signal.emit(detected_img)
@@ -87,6 +94,7 @@ class VideoThread(QThread):
                         identity = identity.split("_")[0]                        
                     else:
                         identity = 'unknown'
+                        self.my_gui.clear_sf_label()
                     
                     self.my_gui.lnHasilPengenalan.setText(identity)
                     
@@ -96,18 +104,18 @@ class VideoThread(QThread):
                     self.original_face_signal.emit(aligned_img)
                     
             else:
-                self.my_gui.clear_label()
+                self.my_gui.clear_all_labels()
                 self.detection_signal.emit(original_img)
             tm.stop()
             fps = "{:.2f}".format(round(tm.getFPS(), 2))
-            self.my_gui.lcdFPS.display(fps)
+            self.my_gui.lcdFPS.display(fps)            
 
     def stop(self):      
         #time.sleep(1)      
         self.quit()
         self.isActive = False
         self.my_gui.lcdSimilarity.display("0")
-        self.my_gui.clear_label()
+        self.my_gui.clear_all_labels()
         self.my_gui.btnKameraPengenalan.setEnabled(True)
         self.my_gui.btnVideoFotoPengenalan.setEnabled(True)
     
@@ -303,7 +311,7 @@ class MyGUI(QMainWindow):
         else:
             file_video_foto = QFileDialog.getOpenFileName(self, "Masukkan gambar/video subjek yang akan diregistrasi", "", "Image/Video Files (*.jpg *.jpeg *.png *.bmp *.mp4)")
             if file_video_foto:
-                self.clear_label()
+                self.clear_all_labels()
                 path_file = str(file_video_foto[0])
                 self.lnVideoFotoRegistrasi.setText(path_file)
                 file_format = path_file.split('.')[-1]
@@ -357,10 +365,11 @@ class MyGUI(QMainWindow):
     
     def tombol_start(self):
         global cameraIndex
+        self.thread.isStopped = False
+        self.thread.isActive = True  
         if self.lnDeteksi.text() == "" or self.lnPengenalan.text() == "":
             QMessageBox.information(None, "Error", "Mohon masukkan file model deteksi & pengenalan pada bagian Setting.")
         else:
-            
             cameraIndex = self.boxKameraRegistrasi.currentIndex()
             self.btnStartRegistrasi.setEnabled(False)      
             self.btnPauseRegistrasi.setEnabled(True)    
@@ -381,8 +390,8 @@ class MyGUI(QMainWindow):
     def tombol_stop(self):
         self.pause = False
         self.stop = True        
-        self.thread.stop()
-        self.clear_label()
+        self.thread.isStopped = True
+        self.clear_all_labels()
         self.btnKameraRegistrasi.setEnabled(True)
         self.btnVideoFotoRegistrasi.setEnabled(True)
         self.btnStartRegistrasi.setEnabled(True)
@@ -496,7 +505,7 @@ class MyGUI(QMainWindow):
         else:       
             img_videofoto_file = QFileDialog.getOpenFileName(self, "Masukkan video/foto yang akan dikenali", "", "Image/Video Files (*.jpg *.jpeg *.png *.bmp *.mp4)")
             if img_videofoto_file:
-                self.clear_label()
+                self.clear_all_labels()
                 path_file = str(img_videofoto_file[0])            
                 self.lnVideoFotoPengenalan.setText(path_file)
                 file_format = path_file.split('.')[-1]
@@ -779,7 +788,7 @@ class MyGUI(QMainWindow):
                     identity = identity.split("_")[0]                        
                 else:
                     identity = 'unknown'
-                    self.clear_label()
+                    self.clear_all_labels()
 
                 self.lnHasilPengenalan.setText(identity)
                 
@@ -791,7 +800,7 @@ class MyGUI(QMainWindow):
         else:
             self.update_detection(original_img)
         
-    def clear_label(self):
+    def clear_all_labels(self):
         if self.pause:
             pass
         else:
@@ -805,7 +814,11 @@ class MyGUI(QMainWindow):
             self.originalFace.setText("Original Face")
             self.similarFace.clear()
             self.similarFace.setText("Similar Face")      
-            self.lnHasilPengenalan.clear()              
+            self.lnHasilPengenalan.clear()
+
+    def clear_sf_label(self):
+        self.similarFace.clear()
+        self.similarFace.setText("Similar Face")    
 
     @pyqtSlot(np.ndarray)
     def update_detection(self, cv_img): 
