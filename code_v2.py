@@ -45,7 +45,7 @@ class VideoThread(QThread):
         cv2.rectangle(detected_img, start_point, end_point, rectangle_color, thickness=2)
         return detected_img
 
-    def run(self):     
+    def run(self):
         global aligned_img   
         cap = cv2.VideoCapture(cameraIndex)
 
@@ -79,8 +79,11 @@ class VideoThread(QThread):
                 pickle_database = open(lokasi_pickle, "rb")
                 database = pickle.load(pickle_database)
                 pickle_database.close()           
-
-            faces = model_yunet.detect(original_img)[1]                        
+            
+            try:
+                face = model_yunet.detect(original_img)[1][0]
+            except:
+                face = None
 
             if self.isStopped:
                 self.my_gui.clear_all_labels()
@@ -88,12 +91,11 @@ class VideoThread(QThread):
                 self.isActive = False
                 break         
 
-            if faces is not None:
-                for face in faces:
-                    detected_img = self.visualize(original_img, face)
-                    face_img = self.crop_face(original_img, face)
-                    aligned_img = self.align_face(original_img, face, model_sface)   
-                    face_feature = model_sface.feature(aligned_img)
+            if face is not None:
+                detected_img = self.visualize(original_img, face)
+                face_img = self.crop_face(original_img, face)
+                aligned_img = self.align_face(original_img, face, model_sface)
+                face_feature = model_sface.feature(aligned_img)
 
                 if self.my_gui.mode_pengenalan == False:
                     self.detection_signal.emit(detected_img)
@@ -113,7 +115,7 @@ class VideoThread(QThread):
                     
                     str_max_cosine = "{:.3f}".format(round(max_cosine, 3))
                     self.my_gui.lcdSimilarity.display(str_max_cosine)
-                    print(str_max_cosine)
+                    
                     if max_cosine >= cosine_similarity_threshold:
                         identity_image = database["img_" + identity]
                         self.similar_face_signal.emit(identity_image)
@@ -149,7 +151,12 @@ class VideoThread(QThread):
 class MyGUI(QMainWindow):
     def __init__(self):
         super().__init__()
-        uic.loadUi("desain_v3.ui", self)
+        ui_dir = self.resource_path("design")
+        ui_file = os.path.join(ui_dir, "design.ui")
+        
+        #ui_file = self.resource_path("desain_v3.ui")
+        print(ui_file)
+        uic.loadUi(ui_file, self)
         self.show()
         
         self.pause = False        
@@ -241,6 +248,10 @@ class MyGUI(QMainWindow):
         self.thread.alignment_signal.connect(self.update_align)
         self.thread.original_face_signal.connect(self.update_original)
         self.thread.similar_face_signal.connect(self.update_similar)
+    
+    def resource_path(self, relative_path):
+        base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
+        return os.path.join(base_path, relative_path)
 
     def dialog_deteksi_wajah(self):
         global file_model_deteksi

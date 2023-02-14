@@ -1,14 +1,15 @@
-3. CUDA
 4. Panduan (pdf)
 8. Refactor
+9. Ngefreeze
 
+3. CUDA (TIDAK PERLU)
 6. Desain UI DONE
 1. Bug Pillow DONE
 7. Handle unknown DONE (sepertinya)
 2. Button edit database DONE
 5. handle nama dengan simbol "_" DONE
 
-Error
+Error DONE
 File "c:\Users\yusuf\OneDrive\Documents\GitHub\pyqt-opencv\yunet.py", line 67, in align_face
     cos_a = (b*b + c*c - a*a) / (2*b*c)
 ZeroDivisionError: float division by zero
