@@ -13,3 +13,4 @@ openai_*.py
 serial_test.py
 database.*
 example.*
+output/

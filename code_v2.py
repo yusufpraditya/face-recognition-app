@@ -92,9 +92,9 @@ class VideoThread(QThread):
                 break         
 
             if face is not None:
-                detected_img = self.visualize(original_img, face)
-                face_img = self.crop_face(original_img, face)
-                aligned_img = self.align_face(original_img, face, model_sface)
+                detected_img = self.my_gui.visualize(original_img, face)
+                face_img = self.my_gui.crop_face(original_img, face)
+                aligned_img = self.my_gui.align_face(original_img, face, model_sface)
                 face_feature = model_sface.feature(aligned_img)
 
                 if self.my_gui.mode_pengenalan == False:
@@ -115,6 +115,7 @@ class VideoThread(QThread):
                     
                     str_max_cosine = "{:.3f}".format(round(max_cosine, 3))
                     self.my_gui.lcdSimilarity.display(str_max_cosine)
+                    print(str_max_cosine)
                     
                     if max_cosine >= cosine_similarity_threshold:
                         identity_image = database["img_" + identity]
@@ -129,7 +130,7 @@ class VideoThread(QThread):
                     self.detection_signal.emit(detected_img)
                     self.crop_signal.emit(face_img)
                     self.alignment_signal.emit(aligned_img)
-                    self.original_face_signal.emit(aligned_img)
+                    self.original_face_signal.emit(aligned_img)                    
                     
             else:
                 self.my_gui.clear_small_labels()
