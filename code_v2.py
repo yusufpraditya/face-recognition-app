@@ -1,3 +1,5 @@
+from tokenize import Triple
+from xmlrpc.client import TRANSPORT_ERROR
 from PyQt6.QtWidgets import QMainWindow, QApplication, QFileDialog, QMessageBox
 from PyQt6 import uic, QtGui
 from PyQt6.QtGui import QPixmap
@@ -46,10 +48,10 @@ class VideoThread(QThread):
         return detected_img
 
     def run(self):
-        global aligned_img   
+        global aligned_img           
         cap = cv2.VideoCapture(cameraIndex)
 
-        if self.my_gui.mode_videofoto_pengenalan or self.my_gui.mode_videofoto_registrasi:
+        if self.my_gui.mode_videofoto_pengenalan or self.my_gui.mode_videofoto_registrasi:           
            cap = cv2.VideoCapture(self.my_gui.path_video)
            self.my_gui.panjang_frame_video = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         
@@ -73,7 +75,7 @@ class VideoThread(QThread):
             if self.my_gui.pause:
                 cap.set(cv2.CAP_PROP_POS_FRAMES, self.my_gui.frame_video)
                 self.my_gui.pause = False
-            _, original_img = cap.read()        
+            frame, original_img = cap.read()  
             self.my_gui.frame_video = cap.get(cv2.CAP_PROP_POS_FRAMES)
             if self.my_gui.mode_pengenalan:
                 pickle_database = open(lokasi_pickle, "rb")
@@ -89,7 +91,7 @@ class VideoThread(QThread):
                 self.my_gui.clear_all_labels()
                 self.isStopped = False
                 self.isActive = False
-                break         
+                break   
 
             if face is not None:
                 detected_img = self.my_gui.visualize(original_img, face)
@@ -114,8 +116,7 @@ class VideoThread(QThread):
                                 identity = key
                     
                     str_max_cosine = "{:.3f}".format(round(max_cosine, 3))
-                    self.my_gui.lcdSimilarity.display(str_max_cosine)
-                    print(str_max_cosine)
+                    self.my_gui.lcdSimilarity.display(str_max_cosine)                   
                     
                     if max_cosine >= cosine_similarity_threshold:
                         identity_image = database["img_" + identity]
@@ -133,8 +134,17 @@ class VideoThread(QThread):
                     self.original_face_signal.emit(aligned_img)                    
                     
             else:
-                self.my_gui.clear_small_labels()
-                self.detection_signal.emit(original_img)
+                self.my_gui.clear_small_labels()                
+                if frame:
+                    self.detection_signal.emit(original_img)                   
+                else:
+                    if self.my_gui.mode_pengenalan:
+                        self.my_gui.tombol_stop_pengenalan()
+                        self.my_gui.refresh_cam_pengenalan()
+                    else:
+                        self.my_gui.tombol_stop()
+                        self.my_gui.refresh_cam_registrasi()                    
+
             tm.stop()
             fps = "{:.2f}".format(round(tm.getFPS(), 2))
             self.my_gui.lcdFPS.display(fps)            
@@ -153,12 +163,10 @@ class MyGUI(QMainWindow):
     def __init__(self):
         super().__init__()
         ui_dir = self.resource_path("design")
-        ui_file = os.path.join(ui_dir, "design.ui")
-        
-        #ui_file = self.resource_path("desain_v3.ui")
-        print(ui_file)
+        ui_file = os.path.join(ui_dir, "design.ui")        
+
         uic.loadUi(ui_file, self)
-        self.show()
+        self.showFullScreen()
         
         self.pause = False        
         self.mode_pengenalan = False
@@ -180,15 +188,30 @@ class MyGUI(QMainWindow):
         
         self.pilihanTab.setCurrentIndex(0)
 
+        self.lnDeteksi.setEnabled(False)
+        self.btnModelDeteksi.setEnabled(False)
+        self.lnPengenalan.setEnabled(False)
+        self.btnModelPengenalan.setEnabled(False)
+
         self.pilihanTab.setEnabled(False)
         self.btnPauseRegistrasi.setEnabled(False)
         self.btnRegister.setEnabled(False)
-        self.btnStopRegistrasi.setEnabled(False)        
+        self.btnStopRegistrasi.setEnabled(False)  
+
+        self.btnPausePengenalan.setEnabled(False)
+        self.btnStopPengenalan.setEnabled(False)     
+
+        # Tombol Panduan
+        self.btnPanduan.clicked.connect(self.tombol_panduan) 
 
         # Pilih tab registrasi/pengenalan/edit database
         self.btnRegistrasi.clicked.connect(self.tab_registrasi)
         self.btnPengenalan.clicked.connect(self.tab_pengenalan)
         self.btnEditDB.clicked.connect(self.tab_edit_database)
+
+        # Tombol refresh kamera
+        self.refreshCamRegistrasi.clicked.connect(self.refresh_cam_registrasi)
+        self.refreshCamPengenalan.clicked.connect(self.refresh_cam_pengenalan)
 
         # Dialog file model deteksi wajah
         self.btnModelDeteksi.clicked.connect(self.dialog_deteksi_wajah)
@@ -240,8 +263,7 @@ class MyGUI(QMainWindow):
         self.btnHapusFrame.clicked.connect(self.tombol_hapus_frame)
 
         # Tombol keluar
-        self.btnExit.clicked.connect(self.tombol_exit)
-        
+        self.btnExit.clicked.connect(self.tombol_exit)        
 
         self.thread = VideoThread(self)
         self.thread.detection_signal.connect(self.update_detection)
@@ -249,26 +271,39 @@ class MyGUI(QMainWindow):
         self.thread.alignment_signal.connect(self.update_align)
         self.thread.original_face_signal.connect(self.update_original)
         self.thread.similar_face_signal.connect(self.update_similar)
+
+    def tombol_panduan(self):
+        os.startfile("test_docs.pdf")
     
     def resource_path(self, relative_path):
         base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
-        return os.path.join(base_path, relative_path)
+        return os.path.join(base_path, relative_path)    
+
+    def refresh_cam_registrasi(self):
+        self.boxKameraRegistrasi.clear()
+        cameraList = QMediaDevices.videoInputs()        
+        for c in cameraList:
+            self.boxKameraRegistrasi.addItem(c.description())
+
+    def refresh_cam_pengenalan(self):
+        self.boxKameraPengenalan.clear()
+        cameraList = QMediaDevices.videoInputs()        
+        for c in cameraList:
+            self.boxKameraPengenalan.addItem(c.description())
 
     def dialog_deteksi_wajah(self):
         global file_model_deteksi
         file = QFileDialog.getOpenFileName(self, "Masukkan file model deteksi wajah", "", "ONNX File (*.onnx)")
         if file:
             file_model_deteksi = str(file[0])
-            self.lnDeteksi.setText(file_model_deteksi)
-            print(file_model_deteksi)
+            self.lnDeteksi.setText(file_model_deteksi)            
     
     def dialog_pengenalan_wajah(self):
         global file_model_pengenalan
         file = QFileDialog.getOpenFileName(self, "Masukkan file model pengenalan wajah", "", "ONNX File (*.onnx)")
         if file:
             file_model_pengenalan = str(file[0])
-            self.lnPengenalan.setText(file_model_pengenalan)
-            print(file_model_pengenalan)
+            self.lnPengenalan.setText(file_model_pengenalan)           
     
     def threshold_similarity(self):
         if self.btnSimilarity.text() == "Terapkan":
@@ -282,30 +317,70 @@ class MyGUI(QMainWindow):
         self.mode_pengenalan = False
         self.pilihanTab.setEnabled(True)
         self.pilihanTab.setCurrentIndex(0)
-        
-        self.btnStartRegistrasi.setEnabled(False)
-        self.btnPauseRegistrasi.setEnabled(False)
-        self.btnStopRegistrasi.setEnabled(False)
+
+        self.lnDeteksi.setEnabled(True)
+        self.btnModelDeteksi.setEnabled(True)
+        self.lnPengenalan.setEnabled(True)
+        self.btnModelPengenalan.setEnabled(True)
 
         self.btnSimilarity.setEnabled(False)
         self.valSimilarity.setEnabled(False)
+
+        if self.btnKameraRegistrasi.isChecked() == False:
+            self.boxKameraRegistrasi.setEnabled(False)
+            self.refreshCamRegistrasi.setEnabled(False)
+
+            self.btnKameraRegistrasi.setCheckable(False)
+            self.btnKameraRegistrasi.setChecked(False)
+            self.btnKameraRegistrasi.setCheckable(True) 
+
+        if self.btnVideoFotoRegistrasi.isChecked() == False:
+            self.lnVideoFotoRegistrasi.setEnabled(False)
+            self.btnLokasiVideoFotoR.setEnabled(False)  
+
+            self.btnVideoFotoRegistrasi.setCheckable(False)
+            self.btnVideoFotoRegistrasi.setChecked(False)
+            self.btnVideoFotoRegistrasi.setCheckable(True)        
+        
     
     def tab_pengenalan(self):
         self.mode_pengenalan = True
         self.pilihanTab.setEnabled(True)
         self.pilihanTab.setCurrentIndex(1)
 
-        self.btnStartPengenalan.setEnabled(False)
-        self.btnPausePengenalan.setEnabled(False)
-        self.btnStopPengenalan.setEnabled(False)
+        self.lnDeteksi.setEnabled(True)
+        self.btnModelDeteksi.setEnabled(True)
+        self.lnPengenalan.setEnabled(True)
+        self.btnModelPengenalan.setEnabled(True)
 
         self.btnSimilarity.setEnabled(True)
         self.valSimilarity.setEnabled(True)
+
+        if self.btnKameraPengenalan.isChecked() == False:
+            self.boxKameraPengenalan.setEnabled(False)
+            self.refreshCamPengenalan.setEnabled(False)
+
+            self.btnKameraPengenalan.setCheckable(False)
+            self.btnKameraPengenalan.setChecked(False)
+            self.btnKameraPengenalan.setCheckable(True) 
+
+        if self.btnVideoFotoPengenalan.isChecked() == False:
+            self.lnVideoFotoPengenalan.setEnabled(False)
+            self.btnLokasiVideoFoto.setEnabled(False)  
+
+            self.btnVideoFotoPengenalan.setCheckable(False)
+            self.btnVideoFotoPengenalan.setChecked(False)
+            self.btnVideoFotoPengenalan.setCheckable(True) 
     
     def tab_edit_database(self):
         self.mode_pengenalan = False
         self.pilihanTab.setEnabled(True)
         self.pilihanTab.setCurrentIndex(2)
+
+        self.lnDeteksi.setEnabled(False)
+        self.btnModelDeteksi.setEnabled(False)
+        self.lnPengenalan.setEnabled(False)
+        self.btnModelPengenalan.setEnabled(False)
 
         self.btnPrevFrame.setEnabled(False)
         self.btnNextFrame.setEnabled(False)
@@ -316,7 +391,9 @@ class MyGUI(QMainWindow):
     
     def kamera_registrasi(self):
         self.mode_videofoto_registrasi = False
+        self.mode_videofoto_pengenalan = False  
         self.boxKameraRegistrasi.setEnabled(True)
+        self.refreshCamRegistrasi.setEnabled(True)
         self.lnVideoFotoRegistrasi.setEnabled(False)
         self.btnLokasiVideoFotoR.setEnabled(False)
         self.boxKameraRegistrasi.clear()
@@ -332,6 +409,7 @@ class MyGUI(QMainWindow):
     def foto_registrasi(self):
         self.mode_videofoto_registrasi = True
         self.boxKameraRegistrasi.setEnabled(False)
+        self.refreshCamRegistrasi.setEnabled(False)
         self.lnVideoFotoRegistrasi.setEnabled(True)
         self.btnLokasiVideoFotoR.setEnabled(True)
         self.boxKameraRegistrasi.clear()
@@ -400,21 +478,51 @@ class MyGUI(QMainWindow):
             self.btnNamaWajah.setText("Terapkan")
             self.lnNamaWajah.setEnabled(True)
     
+    def ukuran_file(self, lokasi):
+        return os.path.getsize(lokasi)
+    
     def tombol_start(self):
         global cameraIndex
         self.thread.isStopped = False
         self.thread.isActive = True  
+        self.refresh_cam_registrasi()
+        
         if self.lnDeteksi.text() == "" or self.lnPengenalan.text() == "":
             QMessageBox.information(None, "Error", "Mohon masukkan file model deteksi & pengenalan pada bagian Setting.")
+        elif self.lnLokasiSimpanDB.text() == "":
+            QMessageBox.information(None, "Error", "Pilih lokasi untuk menyimpan file database terlebih dahulu!") 
+        elif self.boxKameraRegistrasi.currentText() == "":
+            QMessageBox.information(None, "Error", "Webcam tidak terdeteksi.")
         else:
-            cameraIndex = self.boxKameraRegistrasi.currentIndex()
-            self.btnStartRegistrasi.setEnabled(False)      
-            self.btnPauseRegistrasi.setEnabled(True)    
-            self.btnRegister.setEnabled(True)      
-            self.btnStopRegistrasi.setEnabled(True)
-            self.btnKameraRegistrasi.setEnabled(False)
-            self.btnVideoFotoRegistrasi.setEnabled(False)
-            self.thread.start()
+            ukuran_yunet = self.ukuran_file(self.lnDeteksi.text())
+            ukuran_sface = self.ukuran_file(self.lnPengenalan.text())
+            if ukuran_sface > ukuran_yunet:
+                cameraIndex = self.boxKameraRegistrasi.currentIndex()
+                self.btnStartRegistrasi.setEnabled(False)      
+                self.btnPauseRegistrasi.setEnabled(True)    
+                self.btnRegister.setEnabled(True)      
+                self.btnStopRegistrasi.setEnabled(True)
+
+                self.btnRegistrasi.setEnabled(False)
+                self.btnPengenalan.setEnabled(False)
+                self.btnEditDB.setEnabled(False)
+                self.lnDeteksi.setEnabled(False)
+                self.lnPengenalan.setEnabled(False)
+                self.btnModelDeteksi.setEnabled(False)
+                self.btnModelPengenalan.setEnabled(False)
+
+                self.btnKameraRegistrasi.setEnabled(False)
+                self.btnVideoFotoRegistrasi.setEnabled(False)            
+                self.lnLokasiSimpanDB.setEnabled(False)
+                self.btnSimpanWajah.setEnabled(False)
+                self.boxKameraRegistrasi.setEnabled(False)
+                self.refreshCamRegistrasi.setEnabled(False)
+                self.lnVideoFotoRegistrasi.setEnabled(False)
+                self.btnLokasiVideoFotoR.setEnabled(False)                
+
+                self.thread.start()
+            else:
+                QMessageBox.information(None, "Error", "File model yang dimasukkan tidak sesuai. Mohon dicek kembali.")
             
     def tombol_pause(self):
         self.pause = True        
@@ -427,12 +535,34 @@ class MyGUI(QMainWindow):
         self.pause = False               
         self.thread.isStopped = True
         self.clear_all_labels()
-        self.btnKameraRegistrasi.setEnabled(True)
-        self.btnVideoFotoRegistrasi.setEnabled(True)
-        self.btnStartRegistrasi.setEnabled(True)
-        self.btnPauseRegistrasi.setEnabled(False)
+
+        self.btnStartRegistrasi.setEnabled(True)      
+        self.btnPauseRegistrasi.setEnabled(False)    
+        self.btnRegister.setEnabled(False)      
         self.btnStopRegistrasi.setEnabled(False)
-        self.btnRegister.setEnabled(False)        
+
+        self.btnRegistrasi.setEnabled(True)
+        self.btnPengenalan.setEnabled(True)
+        self.btnEditDB.setEnabled(True)
+        self.lnDeteksi.setEnabled(True)
+        self.lnPengenalan.setEnabled(True)
+        self.btnModelDeteksi.setEnabled(True)
+        self.btnModelPengenalan.setEnabled(True)
+
+        self.btnKameraRegistrasi.setEnabled(True)
+        self.btnVideoFotoRegistrasi.setEnabled(True)        
+        self.lnLokasiSimpanDB.setEnabled(True)
+        self.btnSimpanWajah.setEnabled(True)
+
+        if self.btnKameraRegistrasi.isChecked():
+            self.boxKameraRegistrasi.setEnabled(True)
+            self.refreshCamRegistrasi.setEnabled(True)
+        if self.btnVideoFotoRegistrasi.isChecked():
+            self.lnVideoFotoRegistrasi.setEnabled(True)
+            self.btnLokasiVideoFotoR.setEnabled(True)
+
+        self.lnNamaWajah.setEnabled(True)
+        self.btnNamaWajah.setEnabled(True)
     
     def tombol_register(self):
         global aligned_img, file_model_pengenalan
@@ -506,10 +636,12 @@ class MyGUI(QMainWindow):
 
     def kamera_pengenalan(self):          
         self.mode_kamera_pengenalan = True
-        self.mode_videofoto_pengenalan = False
+        self.mode_videofoto_registrasi = False
+        self.mode_videofoto_pengenalan = False        
         self.boxKameraPengenalan.setEnabled(True)
+        self.refreshCamPengenalan.setEnabled(True)
         self.lnVideoFotoPengenalan.setEnabled(False)
-        self.btnLokasiVideoFoto.setEnabled(False)
+        self.btnLokasiVideoFoto.setEnabled(False)        
         self.boxKameraPengenalan.clear()
         self.lnVideoFotoPengenalan.clear()
 
@@ -524,6 +656,7 @@ class MyGUI(QMainWindow):
         self.mode_kamera_pengenalan = False
         self.mode_videofoto_pengenalan = True
         self.boxKameraPengenalan.setEnabled(False)
+        self.refreshCamPengenalan.setEnabled(False)
         self.lnVideoFotoPengenalan.setEnabled(True)
         self.btnLokasiVideoFoto.setEnabled(True)
         self.boxKameraPengenalan.clear()
@@ -586,11 +719,15 @@ class MyGUI(QMainWindow):
     def tombol_start_pengenalan(self):
         global cameraIndex        
         self.thread.isStopped = False
-        self.thread.isActive = True  
+        self.thread.isActive = True
+        self.refresh_cam_pengenalan() 
+        
         if self.lnDeteksi.text() == "" or self.lnPengenalan.text() == "":            
             QMessageBox.information(None, "Error", "Mohon masukkan file model deteksi & pengenalan pada bagian Setting.")        
         elif self.lnLokasiDB.text() == "":            
             QMessageBox.information(None, "Error", "Pilih lokasi folder database terlebih dahulu.")        
+        elif self.boxKameraPengenalan.currentText() == "":
+            QMessageBox.information(None, "Error", "Webcam tidak terdeteksi.")
         else:            
             if self.lnVideoFotoPengenalan.text() == "":
                 if self.mode_videofoto_pengenalan:
@@ -602,9 +739,24 @@ class MyGUI(QMainWindow):
                 cameraIndex = self.boxKameraPengenalan.currentIndex()
                 self.btnStartPengenalan.setEnabled(False)
                 self.btnPausePengenalan.setEnabled(True)            
-                self.btnStopPengenalan.setEnabled(True)
+                self.btnStopPengenalan.setEnabled(True)                
+
+                self.btnRegistrasi.setEnabled(False)
+                self.btnPengenalan.setEnabled(False)
+                self.btnEditDB.setEnabled(False)
+                self.lnDeteksi.setEnabled(False)
+                self.lnPengenalan.setEnabled(False)
+                self.btnModelDeteksi.setEnabled(False)
+                self.btnModelPengenalan.setEnabled(False)
+
                 self.btnKameraPengenalan.setEnabled(False)
                 self.btnVideoFotoPengenalan.setEnabled(False)
+                self.lnLokasiDB.setEnabled(False)
+                self.btnLokasiDB.setEnabled(False)
+                self.boxKameraPengenalan.setEnabled(False)
+                self.refreshCamPengenalan.setEnabled(False)
+                self.lnVideoFotoPengenalan.setEnabled(False)
+                self.btnLokasiVideoFoto.setEnabled(False)
                 self.thread.start()
 
     def tombol_pause_pengenalan(self):
@@ -619,6 +771,29 @@ class MyGUI(QMainWindow):
         self.btnStartPengenalan.setEnabled(True)
         self.btnPausePengenalan.setEnabled(False)
         self.btnStopPengenalan.setEnabled(False)
+        self.btnKameraPengenalan.setEnabled(True)
+        self.btnVideoFotoPengenalan.setEnabled(True)
+
+        self.btnRegistrasi.setEnabled(True)
+        self.btnPengenalan.setEnabled(True)
+        self.btnEditDB.setEnabled(True)
+        self.lnDeteksi.setEnabled(True)
+        self.lnPengenalan.setEnabled(True)
+        self.btnModelDeteksi.setEnabled(True)
+        self.btnModelPengenalan.setEnabled(True)
+
+        self.btnKameraPengenalan.setEnabled(True)
+        self.btnVideoFotoPengenalan.setEnabled(True)
+        self.lnLokasiDB.setEnabled(True)
+        self.btnLokasiDB.setEnabled(True)
+
+        if self.btnKameraPengenalan.isChecked():
+            self.boxKameraPengenalan.setEnabled(True)
+            self.refreshCamPengenalan.setEnabled(True)
+        if self.btnVideoFotoPengenalan.isChecked():
+            self.lnVideoFotoPengenalan.setEnabled(True)
+            self.btnLokasiVideoFoto.setEnabled(True)
+
         self.thread.isStopped = True            
 
     def tombol_exit(self):
@@ -641,17 +816,18 @@ class MyGUI(QMainWindow):
                 for key in database.keys():                    
                     if "img" in key:
                         self.database_keys.append(key)
-                print(self.database_keys)                
+
                 self.update_similar(database[self.database_keys[0]])
                 self.display_nama_wajah(self.database_keys[self.database_index])  
             else:
+                self.lnEditFileDB.clear()
                 QMessageBox.information(None, "Error", "File pickle tidak dapat dibaca. Buat ulang database melalui menu registrasi wajah.")   
-    
+        
     def edit_nama_wajah(self):
-        if self.btnEditNama.text() == "Terapkan":
-            
+        if self.btnEditNama.text() == "Terapkan":            
             if self.lnEditFileDB.text() == "":
                 QMessageBox.information(None, "Error", "Pilih file database terlebih dahulu!") 
+                self.lnEditNama.clear()
             else:
                 if self.lnEditNama.text() == "":
                     QMessageBox.information(None, "Error", "Nama wajah tidak boleh kosong!")
@@ -680,9 +856,7 @@ class MyGUI(QMainWindow):
                         QMessageBox.information(None, "Info", 'Nama wajah "' + self.database_keys[self.database_index].split("_")[1] + '" berhasil diubah menjadi "' + self.lnEditNama.text() + '"')  
 
                         self.database_keys = [key.replace(self.database_keys[self.database_index], new_img_name) for key in self.database_keys]
-
-                        print(new_database_2.keys())
-                        print(self.database_keys)
+                        
                         pickle_database = open(lokasi_pickle, "wb")
                         pickle.dump(new_database_2, pickle_database)
                         pickle_database.close()
@@ -697,10 +871,11 @@ class MyGUI(QMainWindow):
             self.btnBatalEdit.setEnabled(True)
 
     def batal_edit_nama(self):
-        self.display_nama_wajah(self.database_keys[self.database_index])
-        self.btnPrevFrame.setEnabled(True)
-        self.btnNextFrame.setEnabled(True)
-        self.btnHapusFrame.setEnabled(True)
+        if len(self.database_keys) > 0:
+            self.display_nama_wajah(self.database_keys[self.database_index])
+            self.btnPrevFrame.setEnabled(True)
+            self.btnNextFrame.setEnabled(True)
+            self.btnHapusFrame.setEnabled(True)
         self.btnEditNama.setText("Ganti")
         self.lnEditNama.setEnabled(False)
         self.btnBatalEdit.setEnabled(False)
@@ -712,16 +887,12 @@ class MyGUI(QMainWindow):
         pickle_database.close()
         self.database_index += 1
         if self.database_index < len(self.database_keys):
-            self.update_similar(database[self.database_keys[self.database_index]])
-            print(self.database_keys[self.database_index])
+            self.update_similar(database[self.database_keys[self.database_index]])         
             self.display_nama_wajah(self.database_keys[self.database_index])  
         else:
             self.database_index = 0
-            self.update_similar(database[self.database_keys[self.database_index]])
-            print(self.database_keys[self.database_index])
-            self.display_nama_wajah(self.database_keys[self.database_index])  
-        print(self.database_index)
-        print(" ")
+            self.update_similar(database[self.database_keys[self.database_index]])           
+            self.display_nama_wajah(self.database_keys[self.database_index])        
 
     def tombol_prev_frame(self):
         lokasi_pickle = self.lnEditFileDB.text()
@@ -730,16 +901,12 @@ class MyGUI(QMainWindow):
         pickle_database.close()        
         self.database_index -= 1
         if self.database_index >= 0:
-            self.update_similar(database[self.database_keys[self.database_index]])
-            print(self.database_keys[self.database_index])
+            self.update_similar(database[self.database_keys[self.database_index]])            
             self.display_nama_wajah(self.database_keys[self.database_index])  
         else:
             self.database_index = len(self.database_keys) - 1
-            self.update_similar(database[self.database_keys[self.database_index]])
-            print(self.database_keys[self.database_index])
-            self.display_nama_wajah(self.database_keys[self.database_index])  
-        print(self.database_index)
-        print(" ")
+            self.update_similar(database[self.database_keys[self.database_index]])           
+            self.display_nama_wajah(self.database_keys[self.database_index]) 
 
     def tombol_hapus_frame(self):
         lokasi_pickle = self.lnEditFileDB.text()
@@ -747,16 +914,12 @@ class MyGUI(QMainWindow):
         database = pickle.load(pickle_database)
         pickle_database.close()  
 
-        if self.database_keys != []:   
-            print(self.database_keys[self.database_index])
+        if self.database_keys != []:  
             del database[self.database_keys[self.database_index]]
             del database[self.database_keys[self.database_index].replace("img_", "")]
             self.database_keys.remove(self.database_keys[self.database_index])
 
-            if self.database_keys != []: 
-                print(self.database_keys)
-                print(self.database_index)
-                print(" ")
+            if self.database_keys != []:                 
                 if self.database_index == 0:
                     self.update_similar(database[self.database_keys[self.database_index]])
                     self.display_nama_wajah(self.database_keys[self.database_index])  
@@ -767,6 +930,11 @@ class MyGUI(QMainWindow):
             else:
                 self.similarFace.clear()
                 self.similarFace.setText("Similar Face")
+                self.lnEditFileDB.clear()
+                self.lnEditNama.clear()
+                self.btnPrevFrame.setEnabled(False)
+                self.btnNextFrame.setEnabled(False)
+                self.btnHapusFrame.setEnabled(False)
                 QMessageBox.information(None, "Error", "Semua data wajah sudah dihapus. Silakan tambahkan data baru melalui menu registrasi wajah.")
         else:
             self.similarFace.clear()

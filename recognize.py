@@ -136,7 +136,8 @@ def align_face(face_img, landmarks):
         return None
 
 def recognize(img, yunet_detect, face_img, landmarks, database):
-    recognizer = cv.FaceRecognizerSF.create("face_recognition_sface.onnx", "")         
+    recognizer = cv.FaceRecognizerSF.create("face_recognition_sface.onnx", "")       
+    print("yunet_detect ", yunet_detect[1][0])  
     face_align = recognizer.alignCrop(img, yunet_detect[1][0])
     face_feature = recognizer.feature(face_align)
     cv.imshow('align', face_align)
