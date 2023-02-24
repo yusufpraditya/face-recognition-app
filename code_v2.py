@@ -1,5 +1,3 @@
-from tokenize import Triple
-from xmlrpc.client import TRANSPORT_ERROR
 from PyQt6.QtWidgets import QMainWindow, QApplication, QFileDialog, QMessageBox
 from PyQt6 import uic, QtGui
 from PyQt6.QtGui import QPixmap
@@ -154,10 +152,7 @@ class VideoThread(QThread):
         self.quit()
         self.isActive = False
         self.my_gui.lcdSimilarity.display("0")
-        self.my_gui.clear_all_labels()
-        self.my_gui.btnKameraPengenalan.setEnabled(True)
-        self.my_gui.btnVideoFotoPengenalan.setEnabled(True)
-    
+        self.my_gui.clear_all_labels()    
             
 class MyGUI(QMainWindow):
     def __init__(self):
@@ -325,6 +320,8 @@ class MyGUI(QMainWindow):
 
         self.btnSimilarity.setEnabled(False)
         self.valSimilarity.setEnabled(False)
+
+        self.lnLokasiSimpanDB.clear()
 
         if self.btnKameraRegistrasi.isChecked() == False:
             self.boxKameraRegistrasi.setEnabled(False)
@@ -771,8 +768,6 @@ class MyGUI(QMainWindow):
         self.btnStartPengenalan.setEnabled(True)
         self.btnPausePengenalan.setEnabled(False)
         self.btnStopPengenalan.setEnabled(False)
-        self.btnKameraPengenalan.setEnabled(True)
-        self.btnVideoFotoPengenalan.setEnabled(True)
 
         self.btnRegistrasi.setEnabled(True)
         self.btnPengenalan.setEnabled(True)
