@@ -122,7 +122,7 @@ QPushButton:disabled {
           <widget class="QPushButton" name="btnExit">
            <property name="styleSheet">
             <string notr="true">QPushButton {
-	background-color: #e94b41;
+	background-color: #ff0000;
 }
 
 QPushButton:hover,
@@ -244,7 +244,46 @@ qproperty-alignment: AlignCenter;</string>
            </layout>
           </widget>
          </item>
-         <item row="0" column="1">
+         <item row="1" column="2">
+          <widget class="QGroupBox" name="groupBox_10">
+           <property name="title">
+            <string>Verify 2</string>
+           </property>
+           <layout class="QHBoxLayout" name="horizontalLayout_15">
+            <property name="spacing">
+             <number>0</number>
+            </property>
+            <property name="leftMargin">
+             <number>3</number>
+            </property>
+            <property name="topMargin">
+             <number>3</number>
+            </property>
+            <property name="rightMargin">
+             <number>3</number>
+            </property>
+            <property name="bottomMargin">
+             <number>3</number>
+            </property>
+            <item>
+             <widget class="QLabel" name="similarFace">
+              <property name="styleSheet">
+               <string notr="true">color: rgb(0,0,0);
+background-color: rgb(246, 247, 247);
+qproperty-alignment: AlignCenter;</string>
+              </property>
+              <property name="text">
+               <string>Similar Face</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignCenter</set>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item row="0" column="2">
           <widget class="QGroupBox" name="groupBox_3">
            <property name="title">
             <string>Align</string>
@@ -283,10 +322,10 @@ qproperty-alignment: AlignCenter;</string>
            </layout>
           </widget>
          </item>
-         <item row="1" column="0" colspan="2">
+         <item row="1" column="0">
           <widget class="QGroupBox" name="groupBox_4">
            <property name="title">
-            <string>Verify</string>
+            <string>Verify 1</string>
            </property>
            <layout class="QHBoxLayout" name="horizontalLayout_5">
             <property name="spacing">
@@ -319,21 +358,6 @@ qproperty-alignment: AlignCenter;</string>
               </property>
              </widget>
             </item>
-            <item>
-             <widget class="QLabel" name="similarFace">
-              <property name="styleSheet">
-               <string notr="true">color: rgb(0,0,0);
-background-color: rgb(246, 247, 247);
-qproperty-alignment: AlignCenter;</string>
-              </property>
-              <property name="text">
-               <string>Similar Face</string>
-              </property>
-              <property name="alignment">
-               <set>Qt::AlignCenter</set>
-              </property>
-             </widget>
-            </item>
            </layout>
           </widget>
          </item>
@@ -347,7 +371,7 @@ qproperty-alignment: AlignCenter;</string>
          <property name="flat">
           <bool>false</bool>
          </property>
-         <layout class="QVBoxLayout" name="verticalLayout_5" stretch="0,0,1">
+         <layout class="QVBoxLayout" name="verticalLayout_5" stretch="0,0,0,1">
           <item>
            <widget class="QListWidget" name="listDatabase">
             <property name="enabled">
@@ -355,28 +379,22 @@ qproperty-alignment: AlignCenter;</string>
             </property>
            </widget>
           </item>
+          <item alignment="Qt::AlignHCenter">
+           <widget class="QLabel" name="label_17">
+            <property name="text">
+             <string>Hasil pengenalan wajah</string>
+            </property>
+           </widget>
+          </item>
           <item>
-           <layout class="QVBoxLayout" name="verticalLayout_4">
+           <layout class="QHBoxLayout" name="horizontalLayout_16">
             <item>
-             <widget class="QLabel" name="label_3">
+             <widget class="QLabel" name="hasilPengenalan">
               <property name="text">
-               <string>Hasil pengenalan wajah</string>
+               <string> </string>
               </property>
               <property name="alignment">
                <set>Qt::AlignCenter</set>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QLineEdit" name="lnHasilPengenalan">
-              <property name="enabled">
-               <bool>true</bool>
-              </property>
-              <property name="alignment">
-               <set>Qt::AlignCenter</set>
-              </property>
-              <property name="readOnly">
-               <bool>true</bool>
               </property>
              </widget>
             </item>

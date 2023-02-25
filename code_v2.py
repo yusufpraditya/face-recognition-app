@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import QMainWindow, QApplication, QFileDialog, QMessageBox
 from PyQt6 import uic, QtGui
 from PyQt6.QtGui import QPixmap
-from PyQt6.QtCore import QThread, pyqtSignal, pyqtSlot, Qt
+from PyQt6.QtCore import QThread, pyqtSignal, pyqtSlot, QTimer
 from PyQt6.QtMultimedia import *
 from PyQt6.QtMultimediaWidgets import *
 import cv2
@@ -17,8 +17,10 @@ class VideoThread(QThread):
     alignment_signal = pyqtSignal(np.ndarray)
     original_face_signal = pyqtSignal(np.ndarray)
     similar_face_signal = pyqtSignal(np.ndarray)
+    stylesheet_signal = pyqtSignal(str)
+    face_name_signal = pyqtSignal(str)
 
-    global cameraIndex, file_model_deteksi, file_model_pengenalan, lokasi_pickle
+    global cameraIndex, file_model_deteksi, file_model_pengenalan, lokasi_pickle    
     
     def __init__(self, my_gui):
         super().__init__()
@@ -45,9 +47,9 @@ class VideoThread(QThread):
         cv2.rectangle(detected_img, start_point, end_point, rectangle_color, thickness=2)
         return detected_img
 
-    def run(self):
+    def run(self):        
         global aligned_img           
-        cap = cv2.VideoCapture(cameraIndex)
+        cap = cv2.VideoCapture(cameraIndex, cv2.CAP_DSHOW)
 
         if self.my_gui.mode_videofoto_pengenalan or self.my_gui.mode_videofoto_registrasi:           
            cap = cv2.VideoCapture(self.my_gui.path_video)
@@ -66,9 +68,20 @@ class VideoThread(QThread):
                     nms_threshold=0.3,
                     top_k=1)
         
-        model_sface = cv2.FaceRecognizerSF.create(model=file_model_pengenalan, config="")
-        
-        while self.isActive:
+        model_sface = cv2.FaceRecognizerSF.create(model=file_model_pengenalan, config="")     
+        white_background = '''
+            background-color: #fff;
+            color: #000;
+        '''
+        green_background = '''
+            background-color: #00ff00;
+            color: #000;
+        '''
+        red_background = '''
+            background-color: #ff0000;
+            color: #fff;
+        '''
+        while self.isActive:                        
             tm.start()            
             if self.my_gui.pause:
                 cap.set(cv2.CAP_PROP_POS_FRAMES, self.my_gui.frame_video)
@@ -86,7 +99,11 @@ class VideoThread(QThread):
                 face = None
 
             if self.isStopped:
+                print("program stopped")
                 self.my_gui.clear_all_labels()
+                self.stylesheet_signal.emit(white_background)                
+                self.my_gui.lcdSimilarity.display("0")   
+                self.my_gui.lcdFPS.display("0")
                 self.isStopped = False
                 self.isActive = False
                 break   
@@ -102,8 +119,9 @@ class VideoThread(QThread):
                     self.crop_signal.emit(face_img)
                     self.alignment_signal.emit(aligned_img)
                 else:
-                    max_cosine = 0
-                    cosine_similarity_threshold = float(self.my_gui.valSimilarity.text())
+                    max_cosine = 0                    
+                    if self.my_gui.btnSimilarity.text() == "Ganti":
+                        cosine_similarity_threshold = float(self.my_gui.valSimilarity.text())
                     identity = 'unknown'
                     for key in database.keys():
                         name = key.split("_")[0]
@@ -120,35 +138,36 @@ class VideoThread(QThread):
                         identity_image = database["img_" + identity]
                         self.similar_face_signal.emit(identity_image)
                         identity = identity.split("_")[0]                        
+                        self.stylesheet_signal.emit(green_background)
                     else:
                         identity = 'unknown'
                         self.my_gui.clear_sf_label()
+                        self.stylesheet_signal.emit(red_background)                   
                     
-                    self.my_gui.lnHasilPengenalan.setText(identity)
-                    
+                    self.face_name_signal.emit(identity)
+
                     self.detection_signal.emit(detected_img)
                     self.crop_signal.emit(face_img)
                     self.alignment_signal.emit(aligned_img)
-                    self.original_face_signal.emit(aligned_img)                    
+                    self.original_face_signal.emit(aligned_img)                                     
                     
             else:
                 self.my_gui.clear_small_labels()                
                 if frame:
                     self.detection_signal.emit(original_img)                   
                 else:
-                    if self.my_gui.mode_pengenalan:
-                        self.my_gui.tombol_stop_pengenalan()
+                    print("no frame")
+                    self.my_gui.clear_all_labels()
+                    if self.my_gui.mode_pengenalan:                        
                         self.my_gui.refresh_cam_pengenalan()
-                    else:
-                        self.my_gui.tombol_stop()
-                        self.my_gui.refresh_cam_registrasi()                    
-
+                    else:                        
+                        self.my_gui.refresh_cam_registrasi()                   
+            
             tm.stop()
             fps = "{:.2f}".format(round(tm.getFPS(), 2))
-            self.my_gui.lcdFPS.display(fps)            
+            self.my_gui.lcdFPS.display(fps)                          
 
-    def stop(self):      
-        #time.sleep(1)      
+    def stop(self):         
         self.quit()
         self.isActive = False
         self.my_gui.lcdSimilarity.display("0")
@@ -266,6 +285,8 @@ class MyGUI(QMainWindow):
         self.thread.alignment_signal.connect(self.update_align)
         self.thread.original_face_signal.connect(self.update_original)
         self.thread.similar_face_signal.connect(self.update_similar)
+        self.thread.stylesheet_signal.connect(self.update_stylesheet)
+        self.thread.face_name_signal.connect(self.update_face_name)
 
     def tombol_panduan(self):
         os.startfile("test_docs.pdf")
@@ -529,7 +550,8 @@ class MyGUI(QMainWindow):
         self.thread.stop()
 
     def tombol_stop(self):
-        self.pause = False               
+        self.pause = False              
+
         self.thread.isStopped = True
         self.clear_all_labels()
 
@@ -763,7 +785,7 @@ class MyGUI(QMainWindow):
         self.btnStopPengenalan.setEnabled(True)
         self.thread.stop()
 
-    def tombol_stop_pengenalan(self):
+    def tombol_stop_pengenalan(self):        
         self.pause = False       
         self.btnStartPengenalan.setEnabled(True)
         self.btnPausePengenalan.setEnabled(False)
@@ -780,7 +802,7 @@ class MyGUI(QMainWindow):
         self.btnKameraPengenalan.setEnabled(True)
         self.btnVideoFotoPengenalan.setEnabled(True)
         self.lnLokasiDB.setEnabled(True)
-        self.btnLokasiDB.setEnabled(True)
+        self.btnLokasiDB.setEnabled(True)       
 
         if self.btnKameraPengenalan.isChecked():
             self.boxKameraPengenalan.setEnabled(True)
@@ -789,7 +811,9 @@ class MyGUI(QMainWindow):
             self.lnVideoFotoPengenalan.setEnabled(True)
             self.btnLokasiVideoFoto.setEnabled(True)
 
-        self.thread.isStopped = True            
+        self.thread.isStopped = True
+        
+        self.clear_all_labels()      
 
     def tombol_exit(self):
         sys.exit()
@@ -995,9 +1019,9 @@ class MyGUI(QMainWindow):
                 else:
                     identity = 'unknown'
                     self.clear_all_labels()
-
-                self.lnHasilPengenalan.setText(identity)
                 
+                self.update_face_name(identity)
+
                 self.update_original(aligned_img)
 
             self.update_detection(detected_img)        
@@ -1020,7 +1044,7 @@ class MyGUI(QMainWindow):
             self.originalFace.setText("Original Face")
             self.similarFace.clear()
             self.similarFace.setText("Similar Face")      
-            self.lnHasilPengenalan.clear()
+            self.hasilPengenalan.clear()
     
     def clear_small_labels(self):
         if self.pause:
@@ -1034,7 +1058,7 @@ class MyGUI(QMainWindow):
             self.originalFace.setText("Original Face")
             self.similarFace.clear()
             self.similarFace.setText("Similar Face")      
-            self.lnHasilPengenalan.clear()
+            self.hasilPengenalan.clear()
 
     def clear_sf_label(self):
         self.similarFace.clear()
@@ -1059,10 +1083,21 @@ class MyGUI(QMainWindow):
         cv2.rectangle(detected_img, start_point, end_point, rectangle_color, thickness=2)
         return detected_img
 
+    def closeEvent(self, event):
+        print("exited")
+        self.thread.stop()
+        event.accept()
+
+    def convert_cv_qt(self, cv_img):
+        rgb_image = cv2.cvtColor(cv_img, cv2.COLOR_BGR2RGB)
+        h, w, ch = rgb_image.shape
+        bytes_per_line = ch * w
+        qt_format = QtGui.QImage(rgb_image.data, w, h, bytes_per_line, QtGui.QImage.Format.Format_RGB888)
+        return QPixmap.fromImage(qt_format)
+
     @pyqtSlot(np.ndarray)
     def update_detection(self, cv_img): 
         h, w, _ = cv_img.shape
-
         # Resize
         if h > self.detection.height() or w > self.detection.width():
            h_ratio = self.detection.height() / h
@@ -1073,10 +1108,9 @@ class MyGUI(QMainWindow):
            dim = (w, h)
            cv_img = cv2.resize(cv_img, dim)
 
-        bytes_per_line = 3 * w
-        qt_format = QtGui.QImage(cv_img, w, h, bytes_per_line, QtGui.QImage.Format.Format_BGR888)        
-        qt_img = QPixmap.fromImage(qt_format)        
-        self.detection.setPixmap(qt_img)
+        qt_img = self.convert_cv_qt(cv_img)   
+        self.detection.setPixmap(qt_img)    
+        self.detection.repaint()        
 
     @pyqtSlot(np.ndarray)
     def update_crop(self, face_img):
@@ -1115,8 +1149,8 @@ class MyGUI(QMainWindow):
         bytes_per_line = 3 * w
         qt_format = QtGui.QImage(face_img, w, h, bytes_per_line, QtGui.QImage.Format.Format_BGR888)
         qt_img = QPixmap.fromImage(qt_format)
-        self.align.setPixmap(qt_img)
-    
+        self.align.setPixmap(qt_img)        
+
     @pyqtSlot(np.ndarray)
     def update_original(self, face_img):
         h, w, _ = face_img.shape
@@ -1133,7 +1167,7 @@ class MyGUI(QMainWindow):
 
         bytes_per_line = 3 * w
         qt_format = QtGui.QImage(face_img, w, h, bytes_per_line, QtGui.QImage.Format.Format_BGR888)
-        qt_img = QPixmap.fromImage(qt_format)
+        qt_img = QPixmap.fromImage(qt_format)        
         self.originalFace.setPixmap(qt_img)
     
     @pyqtSlot(np.ndarray)
@@ -1152,9 +1186,17 @@ class MyGUI(QMainWindow):
 
         bytes_per_line = 3 * w
         qt_format = QtGui.QImage(face_img, w, h, bytes_per_line, QtGui.QImage.Format.Format_BGR888)
-        qt_img = QPixmap.fromImage(qt_format)
+        qt_img = QPixmap.fromImage(qt_format)        
         self.similarFace.setPixmap(qt_img)
     
+    @pyqtSlot(str)
+    def update_stylesheet(self, stylesheet):
+        self.hasilPengenalan.setStyleSheet(stylesheet)
+    
+    @pyqtSlot(str)
+    def update_face_name(self, face_name):
+        self.hasilPengenalan.setText(face_name)
+
 def main():
     app = QApplication([])
     window = MyGUI()
