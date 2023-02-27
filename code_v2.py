@@ -1,7 +1,7 @@
-from PyQt6.QtWidgets import QMainWindow, QApplication, QFileDialog, QMessageBox
+from PyQt6.QtWidgets import QMainWindow, QApplication, QFileDialog, QMessageBox, QWidget, QLabel, QGridLayout
 from PyQt6 import uic, QtGui
 from PyQt6.QtGui import QPixmap
-from PyQt6.QtCore import QThread, pyqtSignal, pyqtSlot, QTimer
+from PyQt6.QtCore import QThread, pyqtSignal, pyqtSlot, QTimer, Qt
 from PyQt6.QtMultimedia import *
 from PyQt6.QtMultimediaWidgets import *
 import cv2
@@ -19,8 +19,7 @@ class VideoThread(QThread):
     similar_face_signal = pyqtSignal(np.ndarray)
     stylesheet_signal = pyqtSignal(str)
     face_name_signal = pyqtSignal(str)
-
-    global cameraIndex, file_model_deteksi, file_model_pengenalan, lokasi_pickle    
+    error_signal = pyqtSignal() 
     
     def __init__(self, my_gui):
         super().__init__()
@@ -49,7 +48,7 @@ class VideoThread(QThread):
 
     def run(self):        
         global aligned_img           
-        cap = cv2.VideoCapture(cameraIndex, cv2.CAP_DSHOW)
+        cap = cv2.VideoCapture(self.my_gui.cameraIndex, cv2.CAP_DSHOW)
 
         if self.my_gui.mode_videofoto_pengenalan or self.my_gui.mode_videofoto_registrasi:           
            cap = cv2.VideoCapture(self.my_gui.path_video)
@@ -61,14 +60,15 @@ class VideoThread(QThread):
         h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         
         model_yunet = cv2.FaceDetectorYN.create(
-                    model=file_model_deteksi,
+                    model=self.my_gui.file_model_deteksi,
                     config="",
                     input_size=(w, h),
                     score_threshold=0.7,
                     nms_threshold=0.3,
                     top_k=1)
         
-        model_sface = cv2.FaceRecognizerSF.create(model=file_model_pengenalan, config="")     
+        model_sface = cv2.FaceRecognizerSF.create(model=self.my_gui.file_model_pengenalan, config="")    
+        
         white_background = '''
             background-color: #fff;
             color: #000;
@@ -81,6 +81,7 @@ class VideoThread(QThread):
             background-color: #ff0000;
             color: #fff;
         '''
+
         while self.isActive:                        
             tm.start()            
             if self.my_gui.pause:
@@ -89,7 +90,7 @@ class VideoThread(QThread):
             frame, original_img = cap.read()  
             self.my_gui.frame_video = cap.get(cv2.CAP_PROP_POS_FRAMES)
             if self.my_gui.mode_pengenalan:
-                pickle_database = open(lokasi_pickle, "rb")
+                pickle_database = open(self.my_gui.lokasi_pickle, "rb")
                 database = pickle.load(pickle_database)
                 pickle_database.close()           
             
@@ -151,17 +152,22 @@ class VideoThread(QThread):
                     self.alignment_signal.emit(aligned_img)
                     self.original_face_signal.emit(aligned_img)                                     
                     
-            else:
+            else:                 
                 self.my_gui.clear_small_labels()                
-                if frame:
-                    self.detection_signal.emit(original_img)                   
+                if frame:                    
+                    self.detection_signal.emit(original_img)    
                 else:
                     print("no frame")
                     self.my_gui.clear_all_labels()
-                    if self.my_gui.mode_pengenalan:                        
+                    if self.my_gui.mode_pengenalan:         
+                        self.my_gui.tombol_stop_pengenalan()               
                         self.my_gui.refresh_cam_pengenalan()
-                    else:                        
-                        self.my_gui.refresh_cam_registrasi()                   
+                    else:                       
+                        self.my_gui.tombol_stop() 
+                        self.my_gui.refresh_cam_registrasi() 
+                    self.error_signal.emit()
+                    self.isStopped = True
+                    break                  
             
             tm.stop()
             fps = "{:.2f}".format(round(tm.getFPS(), 2))
@@ -172,7 +178,28 @@ class VideoThread(QThread):
         self.isActive = False
         self.my_gui.lcdSimilarity.display("0")
         self.my_gui.clear_all_labels()    
-            
+
+class WindowTentang(QWidget):
+    def __init__(self):
+        super().__init__()
+        main_layout = QGridLayout()
+
+        self.setWindowTitle("Tentang")
+
+        img_dir = self.resource_path("assets") 
+        img_file = os.path.join(img_dir, "tentang.png")       
+
+        self.imgTentang = QLabel()   
+        self.imgTentang.setPixmap(QPixmap(img_file))
+        self.imgTentang.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        main_layout.addWidget(self.imgTentang)
+        self.setLayout(main_layout)   
+    
+    def resource_path(self, relative_path):
+        base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
+        return os.path.join(base_path, relative_path)    
+
 class MyGUI(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -181,6 +208,8 @@ class MyGUI(QMainWindow):
 
         uic.loadUi(ui_file, self)
         self.showFullScreen()
+
+        self.windowTentang = WindowTentang()
         
         self.pause = False        
         self.mode_pengenalan = False
@@ -193,6 +222,10 @@ class MyGUI(QMainWindow):
         self.database_index = 0
         self.panjang_frame_video = 0
         self.frame_video = 0
+        self.cameraIndex = None
+        self.file_model_deteksi = ""
+        self.file_model_pengenalan = ""
+        self.lokasi_pickle = ""
 
         self.display_width = 100
         self.display_height = 100
@@ -276,6 +309,9 @@ class MyGUI(QMainWindow):
         self.btnPrevFrame.clicked.connect(self.tombol_prev_frame)
         self.btnHapusFrame.clicked.connect(self.tombol_hapus_frame)
 
+        # Tombol tentang
+        self.btnTentang.clicked.connect(self.tombol_tentang)
+
         # Tombol keluar
         self.btnExit.clicked.connect(self.tombol_exit)        
 
@@ -287,7 +323,11 @@ class MyGUI(QMainWindow):
         self.thread.similar_face_signal.connect(self.update_similar)
         self.thread.stylesheet_signal.connect(self.update_stylesheet)
         self.thread.face_name_signal.connect(self.update_face_name)
-
+        self.thread.error_signal.connect(self.display_error_message)
+    
+    def display_error_message(self):
+        QMessageBox.information(None, "Error", "Kamera tidak dapat dibaca. Coba lagi dengan menekan tombol start.") 
+        
     def tombol_panduan(self):
         os.startfile("test_docs.pdf")
     
@@ -307,19 +347,17 @@ class MyGUI(QMainWindow):
         for c in cameraList:
             self.boxKameraPengenalan.addItem(c.description())
 
-    def dialog_deteksi_wajah(self):
-        global file_model_deteksi
+    def dialog_deteksi_wajah(self):        
         file = QFileDialog.getOpenFileName(self, "Masukkan file model deteksi wajah", "", "ONNX File (*.onnx)")
         if file:
-            file_model_deteksi = str(file[0])
-            self.lnDeteksi.setText(file_model_deteksi)            
+            self.file_model_deteksi = str(file[0])
+            self.lnDeteksi.setText(self.file_model_deteksi)            
     
-    def dialog_pengenalan_wajah(self):
-        global file_model_pengenalan
+    def dialog_pengenalan_wajah(self):        
         file = QFileDialog.getOpenFileName(self, "Masukkan file model pengenalan wajah", "", "ONNX File (*.onnx)")
         if file:
-            file_model_pengenalan = str(file[0])
-            self.lnPengenalan.setText(file_model_pengenalan)           
+            self.file_model_pengenalan = str(file[0])
+            self.lnPengenalan.setText(self.file_model_pengenalan)           
     
     def threshold_similarity(self):
         if self.btnSimilarity.text() == "Terapkan":
@@ -342,8 +380,16 @@ class MyGUI(QMainWindow):
         self.btnSimilarity.setEnabled(False)
         self.valSimilarity.setEnabled(False)
 
-        self.lnLokasiSimpanDB.clear()
+        self.clear_all_labels()
 
+        self.lnLokasiSimpanDB.clear()
+        self.boxKameraRegistrasi.clear()
+        self.lnVideoFotoRegistrasi.clear()
+        self.lnNamaWajah.clear()
+        self.lnNamaWajah.setEnabled(True)
+        self.btnNamaWajah.setText("Terapkan")
+        self.btnStartRegistrasi.setEnabled(True)
+        self.listDatabase.clear()
         if self.btnKameraRegistrasi.isChecked() == False:
             self.boxKameraRegistrasi.setEnabled(False)
             self.refreshCamRegistrasi.setEnabled(False)
@@ -373,6 +419,13 @@ class MyGUI(QMainWindow):
 
         self.btnSimilarity.setEnabled(True)
         self.valSimilarity.setEnabled(True)
+
+        self.listDatabase.clear()
+        self.lnLokasiDB.clear()
+        self.boxKameraPengenalan.clear()
+        self.lnVideoFotoPengenalan.clear()
+        self.btnStartPengenalan.setEnabled(True)
+        self.clear_all_labels()
 
         if self.btnKameraPengenalan.isChecked() == False:
             self.boxKameraPengenalan.setEnabled(False)
@@ -406,6 +459,16 @@ class MyGUI(QMainWindow):
 
         self.btnSimilarity.setEnabled(False)
         self.valSimilarity.setEnabled(False)
+
+        self.clear_all_labels()
+        self.lnEditFileDB.clear()
+        self.lnEditNama.clear()
+        self.lnEditNama.setEnabled(False)
+        self.btnEditNama.setEnabled(True)
+        self.btnEditNama.setText("Ganti")
+        self.btnBatalEdit.setEnabled(False)
+        self.listDatabase.clear()
+        self.database_keys = []
     
     def kamera_registrasi(self):
         self.mode_videofoto_registrasi = False
@@ -455,30 +518,34 @@ class MyGUI(QMainWindow):
                 else:                    
                     self.btnStartRegistrasi.setEnabled(True)
                     self.path_video = path_file
+
+    def update_list_database(self, database):
+        name_counts = {}
+        for key in database.keys():                
+            name = key.split("_")[0]
+            if name == "img":
+                pass
+            else:
+                if name not in name_counts:
+                    name_counts[name] = 0
+                name_counts[name] += 1
+
+        self.listDatabase.clear()
+        for name, count in name_counts.items():
+            str_list = name + " (" + str(count) + " Frame)"                
+            self.listDatabase.addItem(str_list)
     
     def dialog_simpan_database(self):
         file_database = QFileDialog.getSaveFileName(self, "Pilih lokasi penyimpanan database dan nama filenya", "", "Pickle File (*.pkl)")
         if file_database[0] != "":
             self.lnLokasiSimpanDB.setText(file_database[0])
             if os.path.isfile(file_database[0]):
-                lokasi_pickle = file_database[0]
-                pickle_database = open(lokasi_pickle, "rb")
+                self.lokasi_pickle = file_database[0]
+                pickle_database = open(self.lokasi_pickle, "rb")
                 database = pickle.load(pickle_database)
                 pickle_database.close()
-                name_counts = {}
-                for key in database.keys():                
-                    name = key.split("_")[0]
-                    if name == "img":
-                        pass
-                    else:
-                        if name not in name_counts:
-                            name_counts[name] = 0
-                        name_counts[name] += 1
-
-                self.listDatabase.clear()
-                for name, count in name_counts.items():
-                    str_list = name + " (" + str(count) + " Frame)"                
-                    self.listDatabase.addItem(str_list)   
+                self.update_list_database(database)
+                
             else:
                  self.listDatabase.clear()
     
@@ -499,8 +566,7 @@ class MyGUI(QMainWindow):
     def ukuran_file(self, lokasi):
         return os.path.getsize(lokasi)
     
-    def tombol_start(self):
-        global cameraIndex
+    def tombol_start(self):        
         self.thread.isStopped = False
         self.thread.isActive = True  
         self.refresh_cam_registrasi()
@@ -515,7 +581,7 @@ class MyGUI(QMainWindow):
             ukuran_yunet = self.ukuran_file(self.lnDeteksi.text())
             ukuran_sface = self.ukuran_file(self.lnPengenalan.text())
             if ukuran_sface > ukuran_yunet:
-                cameraIndex = self.boxKameraRegistrasi.currentIndex()
+                self.cameraIndex = self.boxKameraRegistrasi.currentIndex()
                 self.btnStartRegistrasi.setEnabled(False)      
                 self.btnPauseRegistrasi.setEnabled(True)    
                 self.btnRegister.setEnabled(True)      
@@ -584,7 +650,7 @@ class MyGUI(QMainWindow):
         self.btnNamaWajah.setEnabled(True)
     
     def tombol_register(self):
-        global aligned_img, file_model_pengenalan
+        global aligned_img
         
         if self.lnLokasiSimpanDB.text() == "":
             QMessageBox.information(None, "Error", "Mohon masukkan folder penyimpanan database.")
@@ -598,13 +664,13 @@ class MyGUI(QMainWindow):
             now = datetime.datetime.now()
             time_now = now.strftime("%H%M%S")
 
-            lokasi_pickle = self.lnLokasiSimpanDB.text()
+            self.lokasi_pickle = self.lnLokasiSimpanDB.text()
             
             # Simpan database dalam format pickle
             database = {}
 
-            if os.path.isfile(lokasi_pickle):
-                pickle_database = open(lokasi_pickle, "rb")
+            if os.path.isfile(self.lokasi_pickle):
+                pickle_database = open(self.lokasi_pickle, "rb")
                 database = pickle.load(pickle_database)
                 pickle_database.close()            
 
@@ -612,7 +678,7 @@ class MyGUI(QMainWindow):
             database[nama_file_gambar] = aligned_img
             
             nama_wajah = self.lnNamaWajah.text() + "_" + time_now
-            model_pengenalan = cv2.FaceRecognizerSF.create(file_model_pengenalan, "")
+            model_pengenalan = cv2.FaceRecognizerSF.create(self.file_model_pengenalan, "")
 
             if aligned_img is not None: 
                 fitur_wajah = model_pengenalan.feature(aligned_img)
@@ -627,31 +693,18 @@ class MyGUI(QMainWindow):
                     duplikat = False
                 else:
                     database[nama_wajah] = fitur_wajah
-                    lokasi_pickle = self.lnLokasiSimpanDB.text()
-                    pickle_database = open(lokasi_pickle, "wb")
+                    self.lokasi_pickle = self.lnLokasiSimpanDB.text()
+                    pickle_database = open(self.lokasi_pickle, "wb")
                     pickle.dump(database, pickle_database)
                     pickle_database.close()  
-                    QMessageBox.information(None, "Info", 'Wajah "' + self.lnNamaWajah.text() + '" berhasil ditambahkan!')
+                    QMessageBox.information(None, "Info", 'Wajah "' + self.lnNamaWajah.text() + '" berhasil ditambahkan.')
             else:
                 QMessageBox.information(None, "Error", "Gagal.")
-            pickle_database = open(lokasi_pickle, "rb")
+            pickle_database = open(self.lokasi_pickle, "rb")
             database = pickle.load(pickle_database)
             pickle_database.close()
 
-            name_counts = {}
-            for key in database.keys():                
-                name = key.split("_")[0]
-                if name == "img":
-                    pass
-                else:
-                    if name not in name_counts:
-                        name_counts[name] = 0
-                    name_counts[name] += 1
-
-            self.listDatabase.clear()
-            for name, count in name_counts.items():
-                str_list = name + " (" + str(count) + " Frame)"                
-                self.listDatabase.addItem(str_list)   
+            self.update_list_database(database)   
 
     def kamera_pengenalan(self):          
         self.mode_kamera_pengenalan = True
@@ -708,35 +761,24 @@ class MyGUI(QMainWindow):
                     self.path_video = path_file
                     #self.process_video(path_file)
 
-    def dialog_lokasi_database(self):
-        global lokasi_pickle
-        
+    def dialog_lokasi_database(self):        
         file_database = QFileDialog.getOpenFileName(self, "Masukkan file database", "", "Pickle File (*.pkl)")
         
         if file_database[0] != "":
             self.lnLokasiDB.setText(file_database[0])
-            lokasi_pickle = file_database[0]
+            self.lokasi_pickle = file_database[0]
 
-            pickle_database = open(lokasi_pickle, "rb")
+            pickle_database = open(self.lokasi_pickle, "rb")
             database = pickle.load(pickle_database)
-            pickle_database.close()
-            name_counts = {}
-            for key in database.keys():                
-                name = key.split("_")[0]
-                if name == "img":
-                    pass
-                else:
-                    if name not in name_counts:
-                        name_counts[name] = 0
-                    name_counts[name] += 1
+            pickle_database.close()       
+            self.update_list_database(database)     
 
-            self.listDatabase.clear()
-            for name, count in name_counts.items():
-                str_list = name + " (" + str(count) + " Frame)"                
-                self.listDatabase.addItem(str_list)             
+            if database == {}:
+                self.lnLokasiDB.clear()
+                self.listDatabase.clear()
+                QMessageBox.information(None, "Error", "File pickle tidak dapat dibaca. Buat ulang database melalui menu registrasi wajah.")       
 
     def tombol_start_pengenalan(self):
-        global cameraIndex        
         self.thread.isStopped = False
         self.thread.isActive = True
         self.refresh_cam_pengenalan() 
@@ -755,7 +797,7 @@ class MyGUI(QMainWindow):
             if self.btnSimilarity.text() == "Terapkan":
                 QMessageBox.information(None, "Error", "Klik tombol 'Terapkan' pada nilai threshold cosine similarity terlebih dahulu.")
             else:
-                cameraIndex = self.boxKameraPengenalan.currentIndex()
+                self.cameraIndex = self.boxKameraPengenalan.currentIndex()
                 self.btnStartPengenalan.setEnabled(False)
                 self.btnPausePengenalan.setEnabled(True)            
                 self.btnStopPengenalan.setEnabled(True)                
@@ -813,21 +855,27 @@ class MyGUI(QMainWindow):
 
         self.thread.isStopped = True
         
-        self.clear_all_labels()      
+        self.clear_all_labels() 
+
+    def tombol_tentang(self):
+        self.windowTentang.close()
+        self.windowTentang.show()
 
     def tombol_exit(self):
         sys.exit()
 
     def dialog_edit_database(self):
+        self.database_keys = []
         file_database = QFileDialog.getOpenFileName(self, "Masukkan file database", "", "Pickle File (*.pkl)")
         
         if file_database[0] != "":
             self.lnEditFileDB.setText(str(file_database[0]))            
             
-            lokasi_pickle = self.lnEditFileDB.text()
-            pickle_database = open(lokasi_pickle, "rb")
+            self.lokasi_pickle = self.lnEditFileDB.text()
+            pickle_database = open(self.lokasi_pickle, "rb")
             database = pickle.load(pickle_database)
-            pickle_database.close()            
+            pickle_database.close()
+                        
             if self.database_keys == [] and database != {}:
                 self.btnNextFrame.setEnabled(True)
                 self.btnPrevFrame.setEnabled(True)
@@ -838,8 +886,10 @@ class MyGUI(QMainWindow):
 
                 self.update_similar(database[self.database_keys[0]])
                 self.display_nama_wajah(self.database_keys[self.database_index])  
+                self.update_list_database(database)
             else:
                 self.lnEditFileDB.clear()
+                self.listDatabase.clear()
                 QMessageBox.information(None, "Error", "File pickle tidak dapat dibaca. Buat ulang database melalui menu registrasi wajah.")   
         
     def edit_nama_wajah(self):
@@ -862,8 +912,8 @@ class MyGUI(QMainWindow):
                         self.btnEditNama.setText("Ganti")
                         self.lnEditNama.setEnabled(False)
                         self.btnBatalEdit.setEnabled(False)
-                        lokasi_pickle = self.lnEditFileDB.text()
-                        pickle_database = open(lokasi_pickle, "rb")
+                        self.lokasi_pickle = self.lnEditFileDB.text()
+                        pickle_database = open(self.lokasi_pickle, "rb")
                         database = pickle.load(pickle_database)
                         pickle_database.close()
                         new_img_name = "img_" + self.lnEditNama.text() + "_" + self.database_keys[self.database_index].split("_")[2]
@@ -872,13 +922,14 @@ class MyGUI(QMainWindow):
                         new_database_1 = dict((key.replace(self.database_keys[self.database_index], new_img_name), value) for key, value in database.items())
                         new_database_2 = dict((key.replace(self.database_keys[self.database_index].replace("img_", ""), new_name), value) for key, value in new_database_1.items())
                         
-                        QMessageBox.information(None, "Info", 'Nama wajah "' + self.database_keys[self.database_index].split("_")[1] + '" berhasil diubah menjadi "' + self.lnEditNama.text() + '"')  
+                        QMessageBox.information(None, "Info", 'Nama wajah "' + self.database_keys[self.database_index].split("_")[1] + '" berhasil diubah menjadi "' + self.lnEditNama.text() + '".')  
 
                         self.database_keys = [key.replace(self.database_keys[self.database_index], new_img_name) for key in self.database_keys]
                         
-                        pickle_database = open(lokasi_pickle, "wb")
+                        pickle_database = open(self.lokasi_pickle, "wb")
                         pickle.dump(new_database_2, pickle_database)
                         pickle_database.close()
+                        self.update_list_database(new_database_2)
                         
 
         else:
@@ -900,8 +951,8 @@ class MyGUI(QMainWindow):
         self.btnBatalEdit.setEnabled(False)
 
     def tombol_next_frame(self):
-        lokasi_pickle = self.lnEditFileDB.text()
-        pickle_database = open(lokasi_pickle, "rb")
+        self.lokasi_pickle = self.lnEditFileDB.text()
+        pickle_database = open(self.lokasi_pickle, "rb")
         database = pickle.load(pickle_database)
         pickle_database.close()
         self.database_index += 1
@@ -914,8 +965,8 @@ class MyGUI(QMainWindow):
             self.display_nama_wajah(self.database_keys[self.database_index])        
 
     def tombol_prev_frame(self):
-        lokasi_pickle = self.lnEditFileDB.text()
-        pickle_database = open(lokasi_pickle, "rb")
+        self.lokasi_pickle = self.lnEditFileDB.text()
+        pickle_database = open(self.lokasi_pickle, "rb")
         database = pickle.load(pickle_database)
         pickle_database.close()        
         self.database_index -= 1
@@ -928,14 +979,16 @@ class MyGUI(QMainWindow):
             self.display_nama_wajah(self.database_keys[self.database_index]) 
 
     def tombol_hapus_frame(self):
-        lokasi_pickle = self.lnEditFileDB.text()
-        pickle_database = open(lokasi_pickle, "rb")
+        self.lokasi_pickle = self.lnEditFileDB.text()
+        pickle_database = open(self.lokasi_pickle, "rb")
         database = pickle.load(pickle_database)
         pickle_database.close()  
 
         if self.database_keys != []:  
             del database[self.database_keys[self.database_index]]
             del database[self.database_keys[self.database_index].replace("img_", "")]
+
+            QMessageBox.information(None, "Info", 'Wajah "' + self.database_keys[self.database_index].split("_")[1] + '" berhasil dihapus.')
             self.database_keys.remove(self.database_keys[self.database_index])
 
             if self.database_keys != []:                 
@@ -960,9 +1013,10 @@ class MyGUI(QMainWindow):
             self.similarFace.setText("Similar Face")
             QMessageBox.information(None, "Error", "Data wajah kosong. Silakan tambahkan data baru melalui menu registrasi wajah.")
 
-        pickle_database = open(lokasi_pickle, "wb")
+        pickle_database = open(self.lokasi_pickle, "wb")
         pickle.dump(database, pickle_database)
         pickle_database.close()
+        self.update_list_database(database)
     
     def display_nama_wajah(self, nama):
         nama = nama.split("_")[1]
@@ -970,20 +1024,20 @@ class MyGUI(QMainWindow):
     
     def process_image(self, path_gambar):
         global aligned_img
-        file_model_deteksi = self.lnDeteksi.text()
-        file_model_pengenalan = self.lnPengenalan.text()
+        self.file_model_deteksi = self.lnDeteksi.text()
+        self.file_model_pengenalan = self.lnPengenalan.text()
         
         original_img = cv2.imread(path_gambar)
         h, w, _ = original_img.shape
         model_yunet = cv2.FaceDetectorYN.create(
-                    model=file_model_deteksi,
+                    model=self.file_model_deteksi,
                     config="",
                     input_size=(w, h),
                     score_threshold=0.7,
                     nms_threshold=0.3,
                     top_k=1)
         
-        model_sface = cv2.FaceRecognizerSF.create(model=file_model_pengenalan, config="")
+        model_sface = cv2.FaceRecognizerSF.create(model=self.file_model_pengenalan, config="")
 
         faces = model_yunet.detect(original_img)[1]
         if faces is not None:
@@ -995,8 +1049,8 @@ class MyGUI(QMainWindow):
         if detected_img is not None and face_img is not None:
             face_feature = model_sface.feature(aligned_img)
             if self.mode_pengenalan: 
-                lokasi_pickle = self.lnLokasiDB.text()
-                pickle_database = open(lokasi_pickle, "rb")
+                self.lokasi_pickle = self.lnLokasiDB.text()
+                pickle_database = open(self.lokasi_pickle, "rb")
                 database = pickle.load(pickle_database)
                 pickle_database.close() 
                 max_cosine = 0
@@ -1110,7 +1164,7 @@ class MyGUI(QMainWindow):
 
         qt_img = self.convert_cv_qt(cv_img)   
         self.detection.setPixmap(qt_img)    
-        self.detection.repaint()        
+        self.detection.repaint()
 
     @pyqtSlot(np.ndarray)
     def update_crop(self, face_img):

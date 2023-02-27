@@ -112,7 +112,7 @@ QPushButton:disabled {
           </spacer>
          </item>
          <item>
-          <widget class="QPushButton" name="pushButton_2">
+          <widget class="QPushButton" name="btnTentang">
            <property name="text">
             <string>Tentang</string>
            </property>
@@ -391,7 +391,7 @@ qproperty-alignment: AlignCenter;</string>
             <item>
              <widget class="QLabel" name="hasilPengenalan">
               <property name="text">
-               <string> </string>
+               <string/>
               </property>
               <property name="alignment">
                <set>Qt::AlignCenter</set>
@@ -658,7 +658,7 @@ Similarity</string>
           </size>
          </property>
          <property name="currentIndex">
-          <number>1</number>
+          <number>0</number>
          </property>
          <widget class="QWidget" name="page">
           <layout class="QHBoxLayout" name="horizontalLayout_8">
