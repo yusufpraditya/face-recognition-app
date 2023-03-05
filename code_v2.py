@@ -329,7 +329,9 @@ class MyGUI(QMainWindow):
         QMessageBox.information(None, "Error", "Kamera tidak dapat dibaca. Coba lagi dengan menekan tombol start.") 
         
     def tombol_panduan(self):
-        os.startfile("test_docs.pdf")
+        pdf_dir = self.resource_path("assets")
+        pdf_file = os.path.join(pdf_dir, "Panduan.pdf")   
+        os.startfile(pdf_file)
     
     def resource_path(self, relative_path):
         base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
