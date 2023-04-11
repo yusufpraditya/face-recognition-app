@@ -229,7 +229,7 @@ class MyGUI(QMainWindow):
         ui_file = os.path.join(ui_dir, "design.ui")        
 
         uic.loadUi(ui_file, self)
-        self.showFullScreen()
+        self.show()
 
         self.windowTentang = WindowTentang()
         self.windowTujuan = WindowTujuan()
@@ -356,7 +356,7 @@ class MyGUI(QMainWindow):
         
     def tombol_panduan(self):
         pdf_dir = self.resource_path("assets")
-        pdf_file = os.path.join(pdf_dir, "Panduan.pdf")   
+        pdf_file = os.path.join(pdf_dir, "Petunjuk Penggunaan.pdf")   
         os.startfile(pdf_file)
     
     def resource_path(self, relative_path):
