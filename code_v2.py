@@ -200,6 +200,28 @@ class WindowTentang(QWidget):
         base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
         return os.path.join(base_path, relative_path)    
 
+class WindowTujuan(QWidget):
+    def __init__(self):
+        super().__init__()
+        main_layout = QGridLayout()
+
+        self.setWindowTitle("Tujuan")
+
+        img_dir = self.resource_path("assets") 
+        img_file = os.path.join(img_dir, "tujuan.png")       
+
+        self.imgTentang = QLabel()   
+        self.imgTentang.setPixmap(QPixmap(img_file))
+        self.imgTentang.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        main_layout.addWidget(self.imgTentang)
+        self.setLayout(main_layout)   
+    
+    def resource_path(self, relative_path):
+        base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
+        return os.path.join(base_path, relative_path)  
+
+
 class MyGUI(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -210,6 +232,7 @@ class MyGUI(QMainWindow):
         self.showFullScreen()
 
         self.windowTentang = WindowTentang()
+        self.windowTujuan = WindowTujuan()
         
         self.pause = False        
         self.mode_pengenalan = False
@@ -311,6 +334,9 @@ class MyGUI(QMainWindow):
 
         # Tombol tentang
         self.btnTentang.clicked.connect(self.tombol_tentang)
+
+        # Tombol tujuan
+        self.btnTujuan.clicked.connect(self.tombol_tujuan)
 
         # Tombol keluar
         self.btnExit.clicked.connect(self.tombol_exit)        
@@ -862,6 +888,10 @@ class MyGUI(QMainWindow):
     def tombol_tentang(self):
         self.windowTentang.close()
         self.windowTentang.show()
+
+    def tombol_tujuan(self):
+        self.windowTujuan.close()
+        self.windowTujuan.show()
 
     def tombol_exit(self):
         sys.exit()

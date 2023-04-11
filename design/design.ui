@@ -112,6 +112,13 @@ QPushButton:disabled {
           </spacer>
          </item>
          <item>
+          <widget class="QPushButton" name="btnTujuan">
+           <property name="text">
+            <string>Tujuan</string>
+           </property>
+          </widget>
+         </item>
+         <item>
           <widget class="QPushButton" name="btnTentang">
            <property name="text">
             <string>Tentang</string>
