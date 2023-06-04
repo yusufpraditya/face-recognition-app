@@ -274,6 +274,9 @@ class MyGUI(QMainWindow):
         # Tombol Panduan
         self.btnPanduan.clicked.connect(self.tombol_panduan) 
 
+        # Tombol Mode Screen
+        self.btnScreen.clicked.connect(self.tombol_screen)
+
         # Pilih tab registrasi/pengenalan/edit database
         self.btnRegistrasi.clicked.connect(self.tab_registrasi)
         self.btnPengenalan.clicked.connect(self.tab_pengenalan)
@@ -358,6 +361,14 @@ class MyGUI(QMainWindow):
         pdf_dir = self.resource_path("assets")
         pdf_file = os.path.join(pdf_dir, "Petunjuk Penggunaan.pdf")   
         os.startfile(pdf_file)
+    
+    def tombol_screen(self):
+        if self.btnScreen.text() == "Mode Fullscreen":
+            self.showFullScreen()
+            self.btnScreen.setText("Mode Window")
+        else:
+            self.showNormal()
+            self.btnScreen.setText("Mode Fullscreen")
     
     def resource_path(self, relative_path):
         base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
