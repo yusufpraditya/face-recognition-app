@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import QMainWindow, QApplication, QFileDialog, QMessageBox, QWidget, QLabel, QGridLayout
 from PyQt6 import uic, QtGui
 from PyQt6.QtGui import QPixmap
-from PyQt6.QtCore import QThread, pyqtSignal, pyqtSlot, QTimer, Qt
+from PyQt6.QtCore import QThread, pyqtSignal, pyqtSlot, Qt
 from PyQt6.QtMultimedia import *
 from PyQt6.QtMultimediaWidgets import *
 import cv2
@@ -836,28 +836,33 @@ class MyGUI(QMainWindow):
             if self.btnSimilarity.text() == "Terapkan":
                 QMessageBox.information(None, "Error", "Klik tombol 'Terapkan' pada nilai threshold cosine similarity terlebih dahulu.")
             else:
-                self.cameraIndex = self.boxKameraPengenalan.currentIndex()
-                self.btnStartPengenalan.setEnabled(False)
-                self.btnPausePengenalan.setEnabled(True)            
-                self.btnStopPengenalan.setEnabled(True)                
+                ukuran_yunet = self.ukuran_file(self.lnDeteksi.text())
+                ukuran_sface = self.ukuran_file(self.lnPengenalan.text())
+                if ukuran_sface > ukuran_yunet:
+                    self.cameraIndex = self.boxKameraPengenalan.currentIndex()
+                    self.btnStartPengenalan.setEnabled(False)
+                    self.btnPausePengenalan.setEnabled(True)            
+                    self.btnStopPengenalan.setEnabled(True)                
 
-                self.btnRegistrasi.setEnabled(False)
-                self.btnPengenalan.setEnabled(False)
-                self.btnEditDB.setEnabled(False)
-                self.lnDeteksi.setEnabled(False)
-                self.lnPengenalan.setEnabled(False)
-                self.btnModelDeteksi.setEnabled(False)
-                self.btnModelPengenalan.setEnabled(False)
+                    self.btnRegistrasi.setEnabled(False)
+                    self.btnPengenalan.setEnabled(False)
+                    self.btnEditDB.setEnabled(False)
+                    self.lnDeteksi.setEnabled(False)
+                    self.lnPengenalan.setEnabled(False)
+                    self.btnModelDeteksi.setEnabled(False)
+                    self.btnModelPengenalan.setEnabled(False)
 
-                self.btnKameraPengenalan.setEnabled(False)
-                self.btnVideoFotoPengenalan.setEnabled(False)
-                self.lnLokasiDB.setEnabled(False)
-                self.btnLokasiDB.setEnabled(False)
-                self.boxKameraPengenalan.setEnabled(False)
-                self.refreshCamPengenalan.setEnabled(False)
-                self.lnVideoFotoPengenalan.setEnabled(False)
-                self.btnLokasiVideoFoto.setEnabled(False)
-                self.thread.start()
+                    self.btnKameraPengenalan.setEnabled(False)
+                    self.btnVideoFotoPengenalan.setEnabled(False)
+                    self.lnLokasiDB.setEnabled(False)
+                    self.btnLokasiDB.setEnabled(False)
+                    self.boxKameraPengenalan.setEnabled(False)
+                    self.refreshCamPengenalan.setEnabled(False)
+                    self.lnVideoFotoPengenalan.setEnabled(False)
+                    self.btnLokasiVideoFoto.setEnabled(False)
+                    self.thread.start()
+                else:
+                    QMessageBox.information(None, "Error", "File model yang dimasukkan tidak sesuai. Mohon dicek kembali.")
 
     def tombol_pause_pengenalan(self):
         self.pause = True       
